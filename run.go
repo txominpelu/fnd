@@ -63,11 +63,11 @@ func main() {
 func handleEvents(lines []string, s tcell.Screen) {
 	eventChannel := newEventsChannel(s, "")
 	for ev := range eventChannel {
-		switch ev.eventType() {
-		case QueryChanged:
+		switch ev.(type) {
+		case QueryChangedEvent:
 			qChangedEv := ev.(QueryChangedEvent)
 			updateResults(s, lines, qChangedEv.newQuery)
-		case ScreenResize:
+		case ScreenResizeEvent:
 			s.Sync()
 		}
 	}

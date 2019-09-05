@@ -49,15 +49,7 @@ func newEventsChannel(s tcell.Screen, query string) chan Event {
 	return out
 }
 
-type EventType int
-
-const (
-	QueryChanged EventType = iota
-	ScreenResize
-)
-
 type Event interface {
-	eventType() EventType
 }
 
 type QueryChangedEvent struct {
@@ -66,12 +58,4 @@ type QueryChangedEvent struct {
 }
 
 type ScreenResizeEvent struct {
-}
-
-func (e ScreenResizeEvent) eventType() EventType {
-	return ScreenResize
-}
-
-func (e QueryChangedEvent) eventType() EventType {
-	return QueryChanged
 }
