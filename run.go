@@ -54,43 +54,23 @@ func main() {
 		lines = append(lines, scanner.Text())
 	}
 	updateResults(s, lines, query)
-	quit := make(chan struct{})
 
-	handleEvents(lines, s, quit)
-
-	<-quit
+	handleEvents(lines, s)
 
 	s.Fini()
 }
 
-func handleEvents(lines []string, s tcell.Screen, quit chan struct{}) {
-	query := ""
-	go func() {
-		for {
-			ev := s.PollEvent()
-			switch ev := ev.(type) {
-			case *tcell.EventKey:
-				switch ev.Key() {
-				case tcell.KeyEscape:
-					close(quit)
-					return
-				case tcell.KeyEnter:
-					close(quit)
-					return
-				case tcell.KeyDEL:
-					if len(query) > 0 {
-						query = query[:len(query)-1]
-						updateResults(s, lines, query)
-					}
-				case tcell.KeyRune:
-					query = fmt.Sprintf("%s%c", query, ev.Rune())
-					updateResults(s, lines, query)
-				}
-			case *tcell.EventResize:
-				s.Sync()
-			}
+func handleEvents(lines []string, s tcell.Screen) {
+	eventChannel := newEventsChannel(s, "")
+	for ev := range eventChannel {
+		switch ev.eventType() {
+		case QueryChanged:
+			qChangedEv := ev.(QueryChangedEvent)
+			updateResults(s, lines, qChangedEv.newQuery)
+		case ScreenResize:
+			s.Sync()
 		}
-	}()
+	}
 }
 
 func updateResults(s tcell.Screen, lines []string, query string) {
