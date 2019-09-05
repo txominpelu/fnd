@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/gdamore/tcell"
 	"github.com/gdamore/tcell/encoding"
@@ -29,7 +28,6 @@ func puts(s tcell.Screen, style tcell.Style, x, y int, str string) {
 
 func main() {
 
-	query := ""
 	s, e := tcell.NewScreen()
 	if e != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", e)
@@ -53,7 +51,8 @@ func main() {
 	for scanner.Scan() {
 		lines = append(lines, scanner.Text())
 	}
-	updateResults(s, lines, query)
+
+	printRows(s, lines, "")
 
 	handleEvents(lines, s)
 
@@ -61,30 +60,20 @@ func main() {
 }
 
 func handleEvents(lines []string, s tcell.Screen) {
-	eventChannel := newEventsChannel(s, "")
+	eventChannel := newEventsChannel(s, "", lines)
 	for ev := range eventChannel {
 		switch ev.(type) {
 		case QueryChangedEvent:
 			qChangedEv := ev.(QueryChangedEvent)
-			updateResults(s, lines, qChangedEv.newQuery)
+			printRows(s, qChangedEv.filteredLines, qChangedEv.newQuery)
 		case ScreenResizeEvent:
 			s.Sync()
 		}
 	}
 }
 
-func updateResults(s tcell.Screen, lines []string, query string) {
-	s.Clear()
-	filteredLines := []string{}
-	for _, l := range lines {
-		if strings.Contains(l, query) {
-			filteredLines = append(filteredLines, l)
-		}
-	}
-	printRows(s, filteredLines, query)
-}
-
 func printRows(s tcell.Screen, filteredLines []string, query string) {
+	s.Clear()
 	_, h := s.Size()
 	row := h
 	plain := tcell.StyleDefault

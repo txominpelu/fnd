@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/gdamore/tcell"
 )
 
-func newEventsChannel(s tcell.Screen, query string) chan Event {
+func newEventsChannel(s tcell.Screen, query string, entries []string) chan Event {
 	out := make(chan Event)
 
 	go func() {
@@ -26,16 +27,18 @@ func newEventsChannel(s tcell.Screen, query string) chan Event {
 						oldQuery := query
 						query = query[:len(query)-1]
 						out <- QueryChangedEvent{
-							newQuery: query,
-							oldQuery: oldQuery,
+							newQuery:      query,
+							oldQuery:      oldQuery,
+							filteredLines: filterEntries(entries, query),
 						}
 					}
 				case tcell.KeyRune:
 					oldQuery := query
 					query = fmt.Sprintf("%s%c", query, ev.Rune())
 					out <- QueryChangedEvent{
-						newQuery: query,
-						oldQuery: oldQuery,
+						newQuery:      query,
+						oldQuery:      oldQuery,
+						filteredLines: filterEntries(entries, query),
 					}
 				}
 			case *tcell.EventResize:
@@ -49,12 +52,23 @@ func newEventsChannel(s tcell.Screen, query string) chan Event {
 	return out
 }
 
+func filterEntries(lines []string, query string) []string {
+	filteredLines := []string{}
+	for _, l := range lines {
+		if strings.Contains(l, query) {
+			filteredLines = append(filteredLines, l)
+		}
+	}
+	return filteredLines
+}
+
 type Event interface {
 }
 
 type QueryChangedEvent struct {
-	oldQuery string
-	newQuery string
+	oldQuery      string
+	newQuery      string
+	filteredLines []string
 }
 
 type ScreenResizeEvent struct {
