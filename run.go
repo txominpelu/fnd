@@ -52,7 +52,7 @@ func main() {
 		lines = append(lines, scanner.Text())
 	}
 
-	printRows(s, lines, "")
+	printRows(s, SearchState{query: "", filteredLines: lines, selected: 0})
 
 	handleEvents(lines, s)
 
@@ -65,26 +65,34 @@ func handleEvents(lines []string, s tcell.Screen) {
 		switch ev.(type) {
 		case QueryChangedEvent:
 			qChangedEv := ev.(QueryChangedEvent)
-			printRows(s, qChangedEv.filteredLines, qChangedEv.newQuery)
+			printRows(s, qChangedEv.state)
+		case SelectedChangedEvent:
+			sChangedEv := ev.(SelectedChangedEvent)
+			printRows(s, sChangedEv.state)
 		case ScreenResizeEvent:
 			s.Sync()
 		}
 	}
 }
 
-func printRows(s tcell.Screen, filteredLines []string, query string) {
+func printRows(s tcell.Screen, state SearchState) {
 	s.Clear()
 	w, h := s.Size()
 	plain := tcell.StyleDefault
+	blink := tcell.StyleDefault.Foreground(tcell.ColorSilver)
 	bold := tcell.StyleDefault.Bold(true)
 
 	sc := screen{}
 	sc.width = w
 	sc.height = h
-	sc.appendRow(fmt.Sprintf("> %s", query), 0, bold)
+	sc.appendRow(fmt.Sprintf("> %s", state.query), 0, bold)
 
-	for _, l := range filteredLines {
-		sc.appendRow(fmt.Sprintf("  %s", l), 0, plain)
+	for i, l := range state.filteredLines {
+		if i == state.selected {
+			sc.appendRow(fmt.Sprintf(">  %s", l), 0, blink)
+		} else {
+			sc.appendRow(fmt.Sprintf("   %s", l), 0, plain)
+		}
 	}
 	sc.printAll(s)
 
