@@ -74,35 +74,85 @@ func handleEvents(lines []string, s tcell.Screen) {
 
 func printRows(s tcell.Screen, filteredLines []string, query string) {
 	s.Clear()
-	_, h := s.Size()
-	row := h
+	w, h := s.Size()
 	plain := tcell.StyleDefault
 	bold := tcell.StyleDefault.Bold(true)
 
-	row--
-	putln(s, fmt.Sprintf("Query: %s", query), row, bold)
+	sc := screen{}
+	sc.width = w
+	sc.height = h
+	sc.appendRow(fmt.Sprintf("> %s", query), 0, bold)
 
 	for _, l := range filteredLines {
-		row--
-		putln(s, l, row, plain)
+		sc.appendRow(fmt.Sprintf("  %s", l), 0, plain)
 	}
+	sc.printAll(s)
 
 	s.Sync()
 }
 
-// stateMachine {
-// 	delete -> {
-// 		query = query[0:len(query)-1]
-// 		updateResults(query)
-// 	}
-// 	letter -> {
-// 		query = query + newLetter
-// 		updateResults(query)
-// 	}
-// 	esc -> exit()
-// }
-//
-// updateResults {
-// 	filter(query)
-// 	refresh(screen)
-// }
+// template:
+// >
+//  {{#lines}}
+//	{{if .selected}}{{style=highlight}}{{.}}{{^style}}{{else}}
+//	{{fi}}
+//  {{^lines}}
+
+type ContentBlock struct {
+	r     rune
+	style tcell.Style
+}
+
+type Row struct {
+	blocks []ContentBlock
+	width  int
+}
+
+func (row *Row) writeRune(r rune, x int, style tcell.Style) {
+	row.blocks[x].r = r
+	row.blocks[x].style = style
+}
+
+func (row *Row) writeString(s string, x int, style tcell.Style) {
+	i := 0
+	for _, char := range s {
+		if i+x >= row.width {
+			break
+		}
+		row.writeRune(char, i+x, style)
+		i++
+	}
+}
+
+func newRow(width int) Row {
+	return Row{
+		width:  width,
+		blocks: make([]ContentBlock, width),
+	}
+}
+
+type screen struct {
+	rows   []Row
+	width  int
+	height int
+}
+
+func (sc *screen) setRune(x int, y int, r rune, style tcell.Style) {
+	sc.rows[y].blocks[x].r = r
+	sc.rows[y].blocks[x].style = style
+}
+
+// appends a row at height = current_max_height + 1
+func (sc *screen) appendRow(s string, x int, style tcell.Style) {
+	r := newRow(sc.width)
+	r.writeString(s, x, style)
+	sc.rows = append(sc.rows, r)
+}
+
+func (sc *screen) printAll(s tcell.Screen) {
+	for y, r := range sc.rows {
+		for x, b := range r.blocks {
+			s.SetContent(x, sc.height-(y+1), b.r, []rune{}, b.style)
+		}
+	}
+}
