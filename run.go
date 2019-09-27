@@ -71,6 +71,10 @@ func handleEvents(lines []string, s tcell.Screen) {
 			printRows(s, sChangedEv.state)
 		case ScreenResizeEvent:
 			s.Sync()
+		case EntryFinalSelectEvent:
+			finalSelectEvt := ev.(EntryFinalSelectEvent)
+			fmt.Printf(finalSelectEvt.entry)
+			break
 		}
 	}
 }

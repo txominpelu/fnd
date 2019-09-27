@@ -21,8 +21,11 @@ func newEventsChannel(s tcell.Screen, query string, entries []string) chan Event
 					close(out)
 					return
 				case tcell.KeyEnter:
+					filteredEntries := filterEntries(entries, query)
+					out <- EntryFinalSelectEvent{
+						entry: filteredEntries[selected],
+					}
 					close(out)
-					return
 				case tcell.KeyUp:
 					filteredEntries := filterEntries(entries, query)
 					if selected+1 < len(filteredEntries) {
@@ -51,9 +54,9 @@ func newEventsChannel(s tcell.Screen, query string, entries []string) chan Event
 					}
 				case tcell.KeyDEL:
 					if len(query) > 0 {
-						filteredEntries := filterEntries(entries, query)
 						oldQuery := query
 						query = query[:len(query)-1]
+						filteredEntries := filterEntries(entries, query)
 						if len(filteredEntries) <= selected {
 							selected = 0
 						}
@@ -127,4 +130,8 @@ type ScreenResizeEvent struct {
 type SelectedChangedEvent struct {
 	oldSelected int
 	state       SearchState
+}
+
+type EntryFinalSelectEvent struct {
+	entry string
 }
