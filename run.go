@@ -52,7 +52,7 @@ func main() {
 		lines = append(lines, scanner.Text())
 	}
 
-	printRows(s, SearchState{query: "", filteredLines: lines, selected: 0})
+	printRows(s, SearchState{query: "", selected: 0}, lines)
 
 	handleEvents(lines, s)
 
@@ -63,23 +63,20 @@ func handleEvents(lines []string, s tcell.Screen) {
 	eventChannel := newEventsChannel(s, "", lines)
 	for ev := range eventChannel {
 		switch ev.(type) {
-		case QueryChangedEvent:
-			qChangedEv := ev.(QueryChangedEvent)
-			printRows(s, qChangedEv.state)
-		case SelectedChangedEvent:
-			sChangedEv := ev.(SelectedChangedEvent)
-			printRows(s, sChangedEv.state)
+		case SearchStateChanged:
+			qChangedEv := ev.(SearchStateChanged)
+			printRows(s, qChangedEv.state, lines)
 		case ScreenResizeEvent:
 			s.Sync()
 		case EntryFinalSelectEvent:
 			finalSelectEvt := ev.(EntryFinalSelectEvent)
-			fmt.Printf(finalSelectEvt.entry)
+			fmt.Printf(finalSelectEvt.state.entry(lines))
 			break
 		}
 	}
 }
 
-func printRows(s tcell.Screen, state SearchState) {
+func printRows(s tcell.Screen, state SearchState, entries []string) {
 	s.Clear()
 	w, h := s.Size()
 	plain := tcell.StyleDefault
@@ -91,7 +88,7 @@ func printRows(s tcell.Screen, state SearchState) {
 	sc.height = h
 	sc.appendRow(fmt.Sprintf("> %s", state.query), 0, bold)
 
-	for i, l := range state.filteredLines {
+	for i, l := range state.filteredLines(entries) {
 		if i == state.selected {
 			sc.appendRow(fmt.Sprintf(">  %s", l), 0, blink)
 		} else {

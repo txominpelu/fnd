@@ -5,11 +5,12 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell"
+	"github.com/jinzhu/copier"
 )
 
 func newEventsChannel(s tcell.Screen, query string, entries []string) chan Event {
 	out := make(chan Event)
-	selected := 0
+	notifier := StateChangeNotifier{currentState: SearchState{query, 0}, notifyChan: out}
 
 	go func() {
 		for {
@@ -18,78 +19,33 @@ func newEventsChannel(s tcell.Screen, query string, entries []string) chan Event
 			case *tcell.EventKey:
 				switch ev.Key() {
 				case tcell.KeyEscape:
+					notifier.triggerEscape()
 					close(out)
-					return
 				case tcell.KeyEnter:
-					filteredEntries := filterEntries(entries, query)
-					out <- EntryFinalSelectEvent{
-						entry: filteredEntries[selected],
-					}
+					notifier.triggerSelect()
 					close(out)
 				case tcell.KeyUp:
-					filteredEntries := filterEntries(entries, query)
-					if selected+1 < len(filteredEntries) {
-						selected++
-						out <- SelectedChangedEvent{
-							oldSelected: selected - 1,
-							state: SearchState{
-								query:         query,
-								filteredLines: filteredEntries,
-								selected:      selected,
-							},
-						}
+					if notifier.currentState.selected+1 < len(notifier.currentState.filteredLines(entries)) {
+						notifier.setSelected(notifier.currentState.selected + 1)
 					}
 				case tcell.KeyDown:
-					filteredEntries := filterEntries(entries, query)
-					if selected > 0 {
-						selected--
-						out <- SelectedChangedEvent{
-							oldSelected: selected + 1,
-							state: SearchState{
-								query:         query,
-								filteredLines: filteredEntries,
-								selected:      selected,
-							},
-						}
+					if notifier.currentState.selected > 0 {
+						notifier.setSelected(notifier.currentState.selected - 1)
 					}
 				case tcell.KeyDEL:
-					if len(query) > 0 {
-						oldQuery := query
-						query = query[:len(query)-1]
-						filteredEntries := filterEntries(entries, query)
-						if len(filteredEntries) <= selected {
-							selected = 0
-						}
-						out <- QueryChangedEvent{
-							oldQuery: oldQuery,
-							state: SearchState{
-								query:         query,
-								filteredLines: filteredEntries,
-								selected:      selected,
-							},
+					if len(notifier.currentState.query) > 0 {
+						notifier.setQuery(notifier.currentState.query[:len(notifier.currentState.query)-1])
+						filteredEntries := notifier.currentState.filteredLines(entries)
+						if len(filteredEntries) <= notifier.currentState.selected {
+							notifier.setSelected(0)
 						}
 					}
 				case tcell.KeyRune:
-					oldQuery := query
-					query = fmt.Sprintf("%s%c", query, ev.Rune())
-					filteredEntries := filterEntries(entries, query)
-					if len(filteredEntries) <= selected {
-						selected = 0
-					}
-					out <- QueryChangedEvent{
-						oldQuery: oldQuery,
-						state: SearchState{
-							query:         query,
-							filteredLines: filteredEntries,
-							selected:      selected,
-						},
-					}
+					notifier.setQuery(fmt.Sprintf("%s%c", notifier.currentState.query, ev.Rune()))
 				}
 			case *tcell.EventResize:
-
-				s.Sync()
+				notifier.triggerResize()
 			}
-
 		}
 
 	}()
@@ -97,41 +53,86 @@ func newEventsChannel(s tcell.Screen, query string, entries []string) chan Event
 }
 
 func filterEntries(lines []string, query string) []string {
-	filteredLines := []string{}
+	fLines := []string{}
 	for _, l := range lines {
 		if strings.Contains(l, query) {
-			filteredLines = append(filteredLines, l)
+			fLines = append(fLines, l)
 		}
 	}
-	return filteredLines
+	return fLines
+}
+
+type StateChangeNotifier struct {
+	notifyChan   chan Event
+	currentState SearchState
+}
+
+func (s *StateChangeNotifier) setSelected(selected int) {
+	if s.currentState.selected != selected {
+		s.change(s.currentState, func(newState *SearchState) { (*newState).selected = selected })
+	}
+}
+
+func (s *StateChangeNotifier) setQuery(query string) {
+	if s.currentState.query != query {
+		s.change(s.currentState, func(newState *SearchState) { (*newState).query = query })
+	}
+}
+
+func (s *StateChangeNotifier) triggerResize() {
+	s.notifyChan <- ScreenResizeEvent{s.currentState}
+}
+
+func (s *StateChangeNotifier) triggerEscape() {
+	s.notifyChan <- EscapeEvent{}
+}
+
+func (s *StateChangeNotifier) triggerSelect() {
+	s.notifyChan <- EntryFinalSelectEvent{s.currentState}
+}
+
+func (s *StateChangeNotifier) change(currentState SearchState, updateState func(*SearchState)) {
+	newState := SearchState{}
+	copier.Copy(&s.currentState, &newState)
+	updateState(&newState)
+	s.notifyChan <- SearchStateChanged{
+		oldState: s.currentState,
+		state:    newState,
+	}
+	s.currentState = newState
+
 }
 
 //SearchState current state of the search
 type SearchState struct {
-	query         string
-	filteredLines []string
-	selected      int
+	query    string
+	selected int
+}
+
+func (state SearchState) filteredLines(entries []string) []string {
+	return filterEntries(entries, state.query)
+}
+
+func (state SearchState) entry(entries []string) string {
+	return filterEntries(entries, state.query)[state.selected]
 }
 
 //Event any event that can happen inside the application
 type Event interface {
 }
 
-//ChangedEvent query has changed
-type QueryChangedEvent struct {
-	oldQuery string
-	state    SearchState
-}
-
 type ScreenResizeEvent struct {
-}
-
-//SelectedChangedEvent selected item has changed
-type SelectedChangedEvent struct {
-	oldSelected int
-	state       SearchState
+	state SearchState
 }
 
 type EntryFinalSelectEvent struct {
-	entry string
+	state SearchState
+}
+
+type EscapeEvent struct {
+}
+
+type SearchStateChanged struct {
+	oldState SearchState
+	state    SearchState
 }
