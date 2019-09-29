@@ -7,6 +7,7 @@ import (
 
 	"github.com/gdamore/tcell"
 	"github.com/gdamore/tcell/encoding"
+	"github.com/txominpelu/rjobs/screen"
 )
 
 func main() {
@@ -59,30 +60,6 @@ func handleEvents(lines []string, s tcell.Screen) {
 	}
 }
 
-func printRows(s tcell.Screen, state SearchState, entries []string) {
-	s.Clear()
-	w, h := s.Size()
-	plain := tcell.StyleDefault
-	blink := tcell.StyleDefault.Foreground(tcell.ColorSilver)
-	bold := tcell.StyleDefault.Bold(true)
-
-	sc := screen{}
-	sc.width = w
-	sc.height = h
-	sc.appendRow(fmt.Sprintf("> %s", state.query), 0, bold)
-
-	for i, l := range state.filteredLines(entries) {
-		if i == state.selected {
-			sc.appendRow(fmt.Sprintf(">  %s", l), 0, blink)
-		} else {
-			sc.appendRow(fmt.Sprintf("   %s", l), 0, plain)
-		}
-	}
-	sc.printAll(s)
-
-	s.Sync()
-}
-
 // template:
 // >
 //  {{#lines}}
@@ -90,61 +67,24 @@ func printRows(s tcell.Screen, state SearchState, entries []string) {
 //	{{fi}}
 //  {{^lines}}
 
-type ContentBlock struct {
-	r     rune
-	style tcell.Style
-}
+func printRows(s tcell.Screen, state SearchState, entries []string) {
+	s.Clear()
+	w, h := s.Size()
+	plain := tcell.StyleDefault
+	blink := tcell.StyleDefault.Foreground(tcell.ColorSilver)
+	bold := tcell.StyleDefault.Bold(true)
 
-type Row struct {
-	blocks []ContentBlock
-	width  int
-}
+	sc := screen.NewScreen(w, h)
+	sc.AppendRow(fmt.Sprintf("> %s", state.query), 0, bold)
 
-func (row *Row) writeRune(r rune, x int, style tcell.Style) {
-	row.blocks[x].r = r
-	row.blocks[x].style = style
-}
-
-func (row *Row) writeString(s string, x int, style tcell.Style) {
-	i := 0
-	for _, char := range s {
-		if i+x >= row.width {
-			break
-		}
-		row.writeRune(char, i+x, style)
-		i++
-	}
-}
-
-func newRow(width int) Row {
-	return Row{
-		width:  width,
-		blocks: make([]ContentBlock, width),
-	}
-}
-
-type screen struct {
-	rows   []Row
-	width  int
-	height int
-}
-
-func (sc *screen) setRune(x int, y int, r rune, style tcell.Style) {
-	sc.rows[y].blocks[x].r = r
-	sc.rows[y].blocks[x].style = style
-}
-
-// appends a row at height = current_max_height + 1
-func (sc *screen) appendRow(s string, x int, style tcell.Style) {
-	r := newRow(sc.width)
-	r.writeString(s, x, style)
-	sc.rows = append(sc.rows, r)
-}
-
-func (sc *screen) printAll(s tcell.Screen) {
-	for y, r := range sc.rows {
-		for x, b := range r.blocks {
-			s.SetContent(x, sc.height-(y+1), b.r, []rune{}, b.style)
+	for i, l := range state.filteredLines(entries) {
+		if i == state.selected {
+			sc.AppendRow(fmt.Sprintf(">  %s", l), 0, blink)
+		} else {
+			sc.AppendRow(fmt.Sprintf("   %s", l), 0, plain)
 		}
 	}
+	sc.PrintAll(s)
+
+	s.Sync()
 }
