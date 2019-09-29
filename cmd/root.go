@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"bufio"
@@ -7,10 +7,25 @@ import (
 
 	"github.com/gdamore/tcell"
 	"github.com/gdamore/tcell/encoding"
+	"github.com/spf13/cobra"
+	"github.com/txominpelu/rjobs/events"
 	"github.com/txominpelu/rjobs/screen"
 )
 
-func main() {
+var RootCmd = &cobra.Command{
+	Use:   "hugo",
+	Short: "Hugo is a very fast static site generator",
+	Long: `A Fast and Flexible Static Site Generator built with
+                love by spf13 and friends in Go.
+                Complete documentation is available at http://hugo.spf13.com`,
+	Run: runRoot,
+}
+
+func init() {
+	//rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cobra.yaml)")
+}
+
+func runRoot(cmd *cobra.Command, args []string) {
 
 	s, e := tcell.NewScreen()
 	if e != nil {
@@ -36,7 +51,7 @@ func main() {
 		lines = append(lines, scanner.Text())
 	}
 
-	printRows(s, SearchState{query: "", selected: 0}, lines)
+	printRows(s, events.SearchState{Query: "", Selected: 0}, lines)
 
 	handleEvents(lines, s)
 
@@ -44,17 +59,17 @@ func main() {
 }
 
 func handleEvents(lines []string, s tcell.Screen) {
-	eventChannel := newEventsChannel(s, "", lines)
+	eventChannel := events.NewEventsChannel(s, "", lines)
 	for ev := range eventChannel {
 		switch ev.(type) {
-		case SearchStateChanged:
-			qChangedEv := ev.(SearchStateChanged)
-			printRows(s, qChangedEv.state, lines)
-		case ScreenResizeEvent:
+		case events.SearchStateChanged:
+			qChangedEv := ev.(events.SearchStateChanged)
+			printRows(s, qChangedEv.State, lines)
+		case events.ScreenResizeEvent:
 			s.Sync()
-		case EntryFinalSelectEvent:
-			finalSelectEvt := ev.(EntryFinalSelectEvent)
-			fmt.Printf(finalSelectEvt.state.entry(lines))
+		case events.EntryFinalSelectEvent:
+			finalSelectEvt := ev.(events.EntryFinalSelectEvent)
+			fmt.Printf(finalSelectEvt.State.Entry(lines))
 			break
 		}
 	}
@@ -67,7 +82,7 @@ func handleEvents(lines []string, s tcell.Screen) {
 //	{{fi}}
 //  {{^lines}}
 
-func printRows(s tcell.Screen, state SearchState, entries []string) {
+func printRows(s tcell.Screen, state events.SearchState, entries []string) {
 	s.Clear()
 	w, h := s.Size()
 	plain := tcell.StyleDefault
@@ -75,10 +90,10 @@ func printRows(s tcell.Screen, state SearchState, entries []string) {
 	bold := tcell.StyleDefault.Bold(true)
 
 	sc := screen.NewScreen(w, h)
-	sc.AppendRow(fmt.Sprintf("> %s", state.query), 0, bold)
+	sc.AppendRow(fmt.Sprintf("> %s", state.Query), 0, bold)
 
-	for i, l := range state.filteredLines(entries) {
-		if i == state.selected {
+	for i, l := range state.FilteredLines(entries) {
+		if i == state.Selected {
 			sc.AppendRow(fmt.Sprintf(">  %s", l), 0, blink)
 		} else {
 			sc.AppendRow(fmt.Sprintf("   %s", l), 0, plain)
