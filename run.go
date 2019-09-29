@@ -9,23 +9,6 @@ import (
 	"github.com/gdamore/tcell/encoding"
 )
 
-func putln(s tcell.Screen, str string, row int, style tcell.Style) {
-	puts(s, style, 1, row, str)
-}
-
-func puts(s tcell.Screen, style tcell.Style, x, y int, str string) {
-	i := 0
-	var deferred []rune
-	dwidth := 0
-	for _, r := range str {
-		deferred = append(deferred, r)
-	}
-	if len(deferred) != 0 {
-		s.SetContent(x+i, y, deferred[0], deferred[1:], style)
-		i += dwidth
-	}
-}
-
 func main() {
 
 	s, e := tcell.NewScreen()
