@@ -2,22 +2,12 @@ package events
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/gdamore/tcell"
+	"github.com/txominpelu/rjobs/index"
 )
 
-func filterEntries(lines []string, query string) []string {
-	fLines := []string{}
-	for _, l := range lines {
-		if strings.Contains(l, query) {
-			fLines = append(fLines, l)
-		}
-	}
-	return fLines
-}
-
-func NewEventsChannel(s tcell.Screen, query string, entries []string) chan Event {
+func NewEventsChannel(s tcell.Screen, query string, indexedLines *index.IndexedLines) chan Event {
 	out := make(chan Event)
 	st := SearchState{query, 0}
 	notifier := StateChangeNotifier{currentState: st, notifyChan: out}
@@ -30,12 +20,10 @@ func NewEventsChannel(s tcell.Screen, query string, entries []string) chan Event
 				switch ev.Key() {
 				case tcell.KeyEscape:
 					notifier.triggerEscape()
-					close(out)
 				case tcell.KeyEnter:
 					notifier.triggerSelect()
-					close(out)
 				case tcell.KeyUp:
-					if notifier.currentState.Selected+1 < len(notifier.currentState.FilteredLines(entries)) {
+					if notifier.currentState.Selected+1 < len(notifier.currentState.FilteredLines(indexedLines)) {
 						notifier.setSelected(notifier.currentState.Selected + 1)
 					}
 				case tcell.KeyDown:
@@ -44,14 +32,14 @@ func NewEventsChannel(s tcell.Screen, query string, entries []string) chan Event
 					}
 				case tcell.KeyDEL:
 					if len(notifier.currentState.Query) > 0 {
-						notifier.setQuery(notifier.currentState.Query[:len(notifier.currentState.Query)-1], entries)
+						notifier.setQuery(notifier.currentState.Query[:len(notifier.currentState.Query)-1], indexedLines)
 					}
 				case tcell.KeyBS:
 					if len(notifier.currentState.Query) > 0 {
-						notifier.setQuery(notifier.currentState.Query[:len(notifier.currentState.Query)-1], entries)
+						notifier.setQuery(notifier.currentState.Query[:len(notifier.currentState.Query)-1], indexedLines)
 					}
 				case tcell.KeyRune:
-					notifier.setQuery(fmt.Sprintf("%s%c", notifier.currentState.Query, ev.Rune()), entries)
+					notifier.setQuery(fmt.Sprintf("%s%c", notifier.currentState.Query, ev.Rune()), indexedLines)
 				}
 			case *tcell.EventResize:
 				notifier.triggerResize()
@@ -76,12 +64,12 @@ func (s *StateChangeNotifier) setSelected(selected int) {
 	}
 }
 
-func (s *StateChangeNotifier) setQuery(query string, entries []string) {
+func (s *StateChangeNotifier) setQuery(query string, indexedLines *index.IndexedLines) {
 	if s.currentState.Query != query {
 		s.change(func(newState *SearchState) {
 			(*newState).Query = query
 		})
-		filteredEntries := s.currentState.FilteredLines(entries)
+		filteredEntries := s.currentState.FilteredLines(indexedLines)
 		if len(filteredEntries) <= s.currentState.Selected {
 			s.setSelected(0)
 		}
@@ -93,7 +81,7 @@ func (s *StateChangeNotifier) triggerResize() {
 }
 
 func (s *StateChangeNotifier) triggerEscape() {
-	s.notifyChan <- EscapeEvent{}
+	s.notifyChan <- EscapeEvent{s.currentState}
 }
 
 func (s *StateChangeNotifier) triggerSelect() {
@@ -111,7 +99,7 @@ func (s *StateChangeNotifier) change(updateState func(*SearchState)) {
 			Query:    s.currentState.Query,
 			Selected: s.currentState.Selected,
 		},
-		State: newState,
+		state: newState,
 	}
 	s.currentState = newState
 
@@ -123,30 +111,53 @@ type SearchState struct {
 	Selected int
 }
 
-func (state SearchState) FilteredLines(entries []string) []string {
-	return filterEntries(entries, state.Query)
+func (state SearchState) FilteredLines(lines *index.IndexedLines) []string {
+	return lines.FilterEntries(state.Query)
 }
 
-func (state SearchState) Entry(entries []string) string {
-	return filterEntries(entries, state.Query)[state.Selected]
+func (state SearchState) Entry(lines *index.IndexedLines) string {
+	filtered := lines.FilterEntries(state.Query)
+	if state.Selected < len(filtered) {
+		return filtered[state.Selected]
+	} else {
+		return ""
+	}
 }
 
 //Event any event that can happen inside the application
 type Event interface {
+	State() SearchState
 }
 
 type ScreenResizeEvent struct {
-	State SearchState
+	state SearchState
+}
+
+func (e ScreenResizeEvent) State() SearchState {
+	return e.state
 }
 
 type EntryFinalSelectEvent struct {
-	State SearchState
+	state SearchState
+}
+
+func (e EntryFinalSelectEvent) State() SearchState {
+	return e.state
 }
 
 type EscapeEvent struct {
+	state SearchState
+}
+
+func (e EscapeEvent) State() SearchState {
+	return e.state
 }
 
 type SearchStateChanged struct {
 	oldState SearchState
-	State    SearchState
+	state    SearchState
+}
+
+func (e SearchStateChanged) State() SearchState {
+	return e.state
 }
