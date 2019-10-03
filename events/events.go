@@ -46,6 +46,10 @@ func NewEventsChannel(s tcell.Screen, query string, entries []string) chan Event
 					if len(notifier.currentState.Query) > 0 {
 						notifier.setQuery(notifier.currentState.Query[:len(notifier.currentState.Query)-1], entries)
 					}
+				case tcell.KeyBS:
+					if len(notifier.currentState.Query) > 0 {
+						notifier.setQuery(notifier.currentState.Query[:len(notifier.currentState.Query)-1], entries)
+					}
 				case tcell.KeyRune:
 					notifier.setQuery(fmt.Sprintf("%s%c", notifier.currentState.Query, ev.Rune()), entries)
 				}
