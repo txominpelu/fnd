@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/gdamore/tcell"
 	"github.com/gdamore/tcell/encoding"
@@ -64,10 +65,15 @@ func runRoot(cmd *cobra.Command, args []string) {
 
 func handleEvents(lines *index.IndexedLines, s tcell.Screen, state events.SearchState) {
 	eventChannel := events.NewEventsChannel(s, "", lines)
+	ticker := time.NewTicker(500 * time.Millisecond)
+	count := lines.Count()
 	for {
 		select {
-		case <-lines.NewLineChannel:
-			printRows(s, state, lines)
+		case <-ticker.C:
+			if lines.Count() != count {
+				count = lines.Count()
+				printRows(s, state, lines)
+			}
 		case ev := <-eventChannel:
 			state = ev.State()
 			switch ev.(type) {
@@ -104,7 +110,10 @@ func printRows(s tcell.Screen, state events.SearchState, indexedLines *index.Ind
 	sc := screen.NewScreen(w, h)
 	sc.AppendRow(fmt.Sprintf("> %s", state.Query), 0, bold)
 
-	for i, l := range state.FilteredLines(indexedLines) {
+	filtered := state.FilteredLines(indexedLines)
+	sc.AppendRow(fmt.Sprintf("  %d/%d ", len(filtered), indexedLines.Count()), 0, bold)
+
+	for i, l := range filtered {
 		if i == state.Selected {
 			sc.AppendRow(fmt.Sprintf(">  %s", l), 0, blink)
 		} else {

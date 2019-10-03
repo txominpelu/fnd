@@ -5,19 +5,16 @@ import (
 )
 
 type IndexedLines struct {
-	lines          []string
-	NewLineChannel chan string // Channel that notifies about new lines
+	lines []string
+	count int
 }
 
 func (i *IndexedLines) AddLine(line string) {
 	if i.lines == nil {
 		i.lines = []string{}
 	}
-	if i.NewLineChannel == nil {
-		i.NewLineChannel = make(chan string)
-	}
 	i.lines = append(i.lines, line)
-	i.NewLineChannel <- line
+	i.count++
 }
 
 func (i IndexedLines) FilterEntries(query string) []string {
@@ -28,4 +25,8 @@ func (i IndexedLines) FilterEntries(query string) []string {
 		}
 	}
 	return fLines
+}
+
+func (i IndexedLines) Count() int {
+	return i.count
 }
