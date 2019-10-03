@@ -20,8 +20,10 @@ func NewEventsChannel(s tcell.Screen, query string, indexedLines *index.IndexedL
 				switch ev.Key() {
 				case tcell.KeyEscape:
 					notifier.triggerEscape()
+					close(out)
 				case tcell.KeyEnter:
 					notifier.triggerSelect()
+					close(out)
 				case tcell.KeyUp:
 					if notifier.currentState.Selected+1 < len(notifier.currentState.FilteredLines(indexedLines)) {
 						notifier.setSelected(notifier.currentState.Selected + 1)
