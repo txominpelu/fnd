@@ -19,7 +19,9 @@ func TestQueryAndChangeSelect(t *testing.T) {
 		fmt.Fprintf(os.Stderr, "%v\n", e)
 	}
 	lines := []string{"hello", "hello world", "hellod", "helloll"}
-	indexedLines := index.IndexedLines{}
+	indexedLines := index.NewIndexedLines(
+		index.CommandLineTokenizer(),
+	)
 	for _, l := range lines {
 		indexedLines.AddLine(l)
 	}
@@ -58,7 +60,9 @@ func TestSelectGoesZero(t *testing.T) {
 		fmt.Fprintf(os.Stderr, "%v\n", e)
 	}
 	lines := []string{"hello", "hellos", "hellod", "helloll"}
-	indexedLines := index.IndexedLines{}
+	indexedLines := index.NewIndexedLines(
+		index.CommandLineTokenizer(),
+	)
 	for _, l := range lines {
 		indexedLines.AddLine(l)
 	}

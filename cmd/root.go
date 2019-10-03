@@ -45,7 +45,7 @@ func runRoot(cmd *cobra.Command, args []string) {
 		Background(tcell.ColorBlack))
 	s.Clear()
 
-	lines := index.IndexedLines{}
+	lines := index.NewIndexedLines(index.CommandLineTokenizer())
 	go func() {
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {

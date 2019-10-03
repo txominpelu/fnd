@@ -4,6 +4,8 @@ import (
 	"strings"
 )
 
+type Tokenizer = func(string) []string
+
 type Document struct {
 	index   int
 	rawText string
@@ -14,21 +16,49 @@ type Index struct {
 }
 
 type IndexedLines struct {
-	lines []string
-	count int
-	index Index
-	docs  []Document
+	lines     []string
+	count     int
+	index     Index
+	docs      []Document
+	tokenizer Tokenizer
 }
 
-func (i *IndexedLines) AddLine(line string) {
+func CommandLineTokenizer() Tokenizer {
+	return func(s string) []string {
+		results := []string{}
+		builder := strings.Builder{}
+		for _, r := range s {
+			if r == ' ' || r == rune('/') || r == '.' {
+				if builder.Len() > 0 {
+					results = append(results, builder.String())
+					builder.Reset()
+				}
+			} else {
+				builder.WriteRune(r)
+			}
+		}
+		if builder.Len() > 0 {
+			results = append(results, builder.String())
+		}
+		return results
+	}
+}
+
+func NewIndexedLines(tokenizer Tokenizer) IndexedLines {
+	i := IndexedLines{}
 	if i.lines == nil {
 		i.lines = []string{}
 	}
 	if i.index.word2doc == nil {
 		i.index = Index{word2doc: map[string][]int{}}
 	}
+	i.tokenizer = tokenizer
+	return i
+}
+
+func (i *IndexedLines) AddLine(line string) {
 	docId := i.count // docId = index in array
-	for _, word := range strings.Split(line, " ") {
+	for _, word := range i.tokenizer(line) {
 		toLower := strings.ToLower(word)
 		i.index.addWord(toLower, docId)
 		for _, nGram := range findNgrams(toLower, 0, 0) {

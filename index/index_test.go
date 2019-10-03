@@ -6,7 +6,7 @@ import (
 )
 
 func TestBasicQuery(t *testing.T) {
-	lines := IndexedLines{}
+	lines := NewIndexedLines(CommandLineTokenizer())
 	lines.AddLine("hello world")
 	lines.AddLine("this is the best WOrld")
 	lines.AddLine("this won't match")
@@ -16,6 +16,20 @@ func TestBasicQuery(t *testing.T) {
 	}
 
 	got := lines.FilterEntries("world")
+	if !reflect.DeepEqual(expected, got) {
+		t.Errorf("Expected: '%v' but got '%v'", expected, got)
+	}
+
+}
+
+func TestTokenizer(t *testing.T) {
+	tokenizer := CommandLineTokenizer()
+	got := tokenizer("/hello.world tal/")
+	expected := []string{
+		"hello",
+		"world",
+		"tal",
+	}
 	if !reflect.DeepEqual(expected, got) {
 		t.Errorf("Expected: '%v' but got '%v'", expected, got)
 	}
