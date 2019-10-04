@@ -47,9 +47,15 @@ func runRoot(cmd *cobra.Command, args []string) {
 
 	lines := index.NewIndexedLines(index.CommandLineTokenizer())
 	go func() {
-		scanner := bufio.NewScanner(os.Stdin)
-		for scanner.Scan() {
-			lines.AddLine(scanner.Text())
+		if stdinHasPipe() {
+			scanner := bufio.NewScanner(os.Stdin)
+			for scanner.Scan() {
+				lines.AddLine(scanner.Text())
+			}
+			fmt.Println("Finished reading lines")
+			if err := scanner.Err(); err != nil {
+				panic(fmt.Sprintf("Error: %s while reading stdin", err))
+			}
 		}
 	}()
 
@@ -59,6 +65,18 @@ func runRoot(cmd *cobra.Command, args []string) {
 	handleEvents(&lines, s, initialState)
 
 	s.Fini()
+}
+
+func stdinHasPipe() bool {
+
+	fi, err := os.Stdin.Stat()
+	if err != nil {
+		panic(err)
+	}
+	if fi.Mode()&os.ModeNamedPipe == 0 {
+		return false
+	}
+	return true
 }
 
 func handleEvents(lines *index.IndexedLines, s tcell.Screen, state events.SearchState) {
