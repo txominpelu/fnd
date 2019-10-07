@@ -21,6 +21,7 @@ func TestQueryAndChangeSelect(t *testing.T) {
 	lines := []string{"hello", "hello world", "hellod", "helloll"}
 	indexedLines := index.NewIndexedLines(
 		index.CommandLineTokenizer(),
+		index.PlainTextParser(),
 	)
 	for _, l := range lines {
 		indexedLines.AddLine(l)
@@ -62,6 +63,7 @@ func TestSelectGoesZero(t *testing.T) {
 	lines := []string{"hello", "hellos", "hellod", "helloll"}
 	indexedLines := index.NewIndexedLines(
 		index.CommandLineTokenizer(),
+		index.PlainTextParser(),
 	)
 	for _, l := range lines {
 		indexedLines.AddLine(l)

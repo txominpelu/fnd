@@ -6,13 +6,13 @@ import (
 )
 
 func TestBasicQuery(t *testing.T) {
-	lines := NewIndexedLines(CommandLineTokenizer())
+	lines := NewIndexedLines(CommandLineTokenizer(), PlainTextParser())
 	lines.AddLine("hello world")
 	lines.AddLine("this is the best WOrld")
 	lines.AddLine("this won't match")
 	expected := []string{
-		"hello world",
 		"this is the best WOrld",
+		"hello world",
 	}
 
 	got := lines.FilterEntries("world")

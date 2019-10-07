@@ -21,8 +21,10 @@ var RootCmd = &cobra.Command{
 	Run:   runRoot,
 }
 
+var lineOutput string
+
 func init() {
-	//rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cobra.yaml)")
+	//RootCmd.PersistentFlags().StringVar(&cfgFile, "line_output", "", "what will be the output of choosing a line (jq format)")
 }
 
 func runRoot(cmd *cobra.Command, args []string) {
@@ -45,14 +47,13 @@ func runRoot(cmd *cobra.Command, args []string) {
 		Background(tcell.ColorBlack))
 	s.Clear()
 
-	lines := index.NewIndexedLines(index.CommandLineTokenizer())
+	lines := index.NewIndexedLines(index.CommandLineTokenizer(), index.PlainTextParser())
 	go func() {
 		if stdinHasPipe() {
 			scanner := bufio.NewScanner(os.Stdin)
 			for scanner.Scan() {
 				lines.AddLine(scanner.Text())
 			}
-			fmt.Println("Finished reading lines")
 			if err := scanner.Err(); err != nil {
 				panic(fmt.Sprintf("Error: %s while reading stdin", err))
 			}
@@ -82,14 +83,10 @@ func stdinHasPipe() bool {
 func handleEvents(lines *index.IndexedLines, s tcell.Screen, state events.SearchState) {
 	eventChannel := events.NewEventsChannel(s, "", lines)
 	ticker := time.NewTicker(500 * time.Millisecond)
-	count := lines.Count()
 	for {
 		select {
 		case <-ticker.C:
-			if lines.Count() != count {
-				count = lines.Count()
-				printRows(s, state, lines)
-			}
+			printRows(s, state, lines)
 		case ev := <-eventChannel:
 			state = ev.State()
 			switch ev.(type) {
