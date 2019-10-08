@@ -11,8 +11,8 @@ func TestBasicQuery(t *testing.T) {
 	lines.AddLine("this is the best WOrld")
 	lines.AddLine("this won't match")
 	expected := []string{
-		"this is the best WOrld",
 		"hello world",
+		"this is the best WOrld",
 	}
 
 	got := lines.FilterEntries("world")

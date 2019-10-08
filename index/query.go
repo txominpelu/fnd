@@ -1,6 +1,8 @@
 package index
 
-import "strings"
+import (
+	"strings"
+)
 
 // Query
 func (i IndexedLines) FilterEntries(query string) []string {
@@ -14,13 +16,24 @@ func (i IndexedLines) FilterEntries(query string) []string {
 				return []string{}
 			}
 		}
-		rawStrings := make([]string, len(results))
+		docIds := make([]int, len(results))
 		{
 			j := 0
-			for docId := range results {
-				rawStrings[j] = i.docs[docId].rawText
+			for dId := range results {
+				docIds[j] = dId
 				j++
 			}
+		}
+		Sort(docIds, func(d1 int, d2 int) bool {
+			if len(i.docs[d1].rawText) != len(i.docs[d2].rawText) {
+				return len(i.docs[d1].rawText) < len(i.docs[d2].rawText)
+			} else {
+				return d1 < d2
+			}
+		})
+		rawStrings := make([]string, len(docIds))
+		for j, docId := range docIds {
+			rawStrings[j] = i.docs[docId].rawText
 		}
 		return rawStrings
 	}
@@ -30,6 +43,11 @@ func (i IndexedLines) FilterEntries(query string) []string {
 		rawStrings[j] = doc.rawText
 	}
 	return rawStrings
+}
+
+func scoreFunction(subQueries []SubQuery, results map[int]bool, docs []Document) {
+	return
+
 }
 
 func intersection(s1 map[int]bool, s2 map[int]bool) map[int]bool {
