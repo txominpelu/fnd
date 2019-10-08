@@ -28,6 +28,11 @@ fnd is heavily inspired by [fzf](https://github.com/junegunn/fzf) but with addit
 
 1) Pipe a list to fnd  2) search elements 3) pick your favourite or exit. 
 
+If nothing is passed in stdin:
+
+1) If folder inside a git repo, the list contains the result of *git ls-files*.
+2) If it's not inside a git repo, the list contains a recursive walk of all the files inside the current dir.
+
 Examples:
 
 - Open file with vi:

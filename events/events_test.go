@@ -26,7 +26,7 @@ func TestQueryAndChangeSelect(t *testing.T) {
 	for _, l := range lines {
 		indexedLines.AddLine(l)
 	}
-	eventsChan := NewEventsChannel(s, "", &indexedLines)
+	eventChannel := NewEventsChannel(s, "", &indexedLines)
 	go func() {
 		s.PostEvent(tcell.NewEventKey(tcell.KeyRune, 'h', tcell.ModNone))
 		s.PostEvent(tcell.NewEventKey(tcell.KeyRune, 'e', tcell.ModNone))
@@ -39,14 +39,20 @@ func TestQueryAndChangeSelect(t *testing.T) {
 		s.PostEvent(tcell.NewEventKey(tcell.KeyESC, 0, tcell.ModNone))
 	}()
 	events := []Event{}
-	for ev := range eventsChan {
-		events = append(events, ev)
+	for ev := range eventChannel {
+		switch ev.(type) {
+		case EscapeEvent:
+			close(eventChannel)
+			break
+		default:
+			events = append(events, ev)
+		}
 	}
 	expected := SearchState{
 		Query:    "hello",
 		Selected: 1,
 	}
-	ev := events[len(events)-2].(SearchStateChanged)
+	ev := events[len(events)-1].(SearchStateChanged)
 	if !reflect.DeepEqual(ev.State(), expected) {
 		t.Errorf("expected: '%v' got: '%v'\n", expected, ev.State())
 	}
@@ -68,7 +74,7 @@ func TestSelectGoesZero(t *testing.T) {
 	for _, l := range lines {
 		indexedLines.AddLine(l)
 	}
-	eventsChan := NewEventsChannel(s, "", &indexedLines)
+	eventChannel := NewEventsChannel(s, "", &indexedLines)
 	go func() {
 		s.PostEvent(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
 		s.PostEvent(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
@@ -78,14 +84,20 @@ func TestSelectGoesZero(t *testing.T) {
 		s.PostEvent(tcell.NewEventKey(tcell.KeyESC, 0, tcell.ModNone))
 	}()
 	events := []Event{}
-	for ev := range eventsChan {
-		events = append(events, ev)
+	for ev := range eventChannel {
+		switch ev.(type) {
+		case EscapeEvent:
+			close(eventChannel)
+			break
+		default:
+			events = append(events, ev)
+		}
 	}
 	expected := SearchState{
 		Query:    "ho",
 		Selected: 0,
 	}
-	ev := events[len(events)-2].(SearchStateChanged)
+	ev := events[len(events)-1].(SearchStateChanged)
 	if !reflect.DeepEqual(ev.State(), expected) {
 		t.Errorf("expected: '%v' got: '%v'\n", expected, ev.State())
 	}

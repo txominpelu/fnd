@@ -4,6 +4,9 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gdamore/tcell"
@@ -57,15 +60,61 @@ func runRoot(cmd *cobra.Command, args []string) {
 			if err := scanner.Err(); err != nil {
 				panic(fmt.Sprintf("Error: %s while reading stdin", err))
 			}
+		} else {
+			filesChannel := listFiles()
+			for line := range filesChannel {
+				lines.AddLine(line)
+			}
 		}
 	}()
 
 	initialState := events.SearchState{Query: "", Selected: 0}
 	printRows(s, initialState, &lines)
-
 	handleEvents(&lines, s, initialState)
 
 	s.Fini()
+}
+
+func listFiles() chan string {
+	out := make(chan string)
+	go func() {
+		if isGitFolder() {
+			for _, f := range gitLs() {
+				out <- f
+			}
+			close(out)
+		} else {
+			filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					return err
+				}
+				out <- path
+				return nil
+			})
+			close(out)
+		}
+		//FIXME: log error if err != nil
+	}()
+	return out
+}
+
+func gitLs() []string {
+	args := strings.Fields("git ls-files")
+	out, err := exec.Command(args[0], args[1:]...).Output()
+	if err != nil {
+		//FIXME: log error
+		return []string{}
+	}
+	return strings.Split(string(out), "\n")
+}
+
+func isGitFolder() bool {
+	args := strings.Fields("git rev-parse --is-inside-work-tree")
+	out, err := exec.Command(args[0], args[1:]...).Output()
+	if err != nil {
+		return false
+	}
+	return strings.TrimSpace(string(out)) == "true"
 }
 
 func stdinHasPipe() bool {
@@ -98,8 +147,10 @@ func handleEvents(lines *index.IndexedLines, s tcell.Screen, state events.Search
 			case events.EntryFinalSelectEvent:
 				finalSelectEvt := ev.(events.EntryFinalSelectEvent)
 				fmt.Printf(finalSelectEvt.State().Entry(lines))
+				close(eventChannel)
 				return
 			case events.EscapeEvent:
+				close(eventChannel)
 				return
 			}
 		}
