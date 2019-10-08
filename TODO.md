@@ -1,6 +1,7 @@
 
 TODO:
 
+- When tokenizing don't split by dot, just stem by it
 - Log to a ~/.fnd logs file
 
 Features:

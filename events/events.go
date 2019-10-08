@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/gdamore/tcell"
-	"github.com/txominpelu/rjobs/index"
+	"github.com/txominpelu/fnd/index"
 )
 
 func NewEventsChannel(s tcell.Screen, query string, indexedLines *index.IndexedLines) chan Event {

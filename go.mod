@@ -1,4 +1,4 @@
-module github.com/txominpelu/rjobs
+module github.com/txominpelu/fnd
 
 go 1.12
 

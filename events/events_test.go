@@ -8,7 +8,7 @@ import (
 
 	"github.com/gdamore/tcell"
 	"github.com/gdamore/tcell/encoding"
-	"github.com/txominpelu/rjobs/index"
+	"github.com/txominpelu/fnd/index"
 )
 
 func TestQueryAndChangeSelect(t *testing.T) {

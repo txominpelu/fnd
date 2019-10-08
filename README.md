@@ -46,4 +46,6 @@ $(pipenv --py) run.py  | fzf --inline-info --preview 'echo {} | jq -r ".descript
 
 # Use case 
 
-./rjobs --see '.description' --query 'description:hello'
+```
+fnd --see '.description' --query 'description:hello'
+```

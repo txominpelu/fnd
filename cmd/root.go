@@ -12,9 +12,9 @@ import (
 	"github.com/gdamore/tcell"
 	"github.com/gdamore/tcell/encoding"
 	"github.com/spf13/cobra"
-	"github.com/txominpelu/rjobs/events"
-	"github.com/txominpelu/rjobs/index"
-	"github.com/txominpelu/rjobs/screen"
+	"github.com/txominpelu/fnd/events"
+	"github.com/txominpelu/fnd/index"
+	"github.com/txominpelu/fnd/screen"
 )
 
 var RootCmd = &cobra.Command{
