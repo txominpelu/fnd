@@ -15,7 +15,11 @@ func TestBasicQuery(t *testing.T) {
 		"this is the best WOrld",
 	}
 
-	got := lines.FilterEntries("world")
+	gotDocs := lines.FilterEntries("world")
+	got := make([]string, len(gotDocs))
+	for i, d := range gotDocs {
+		got[i] = d.RawText
+	}
 	if !reflect.DeepEqual(expected, got) {
 		t.Errorf("Expected: '%v' but got '%v'", expected, got)
 	}

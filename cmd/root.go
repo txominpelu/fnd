@@ -18,16 +18,16 @@ import (
 )
 
 var RootCmd = &cobra.Command{
-	Use:   "hugo",
+	Use:   "fnd",
 	Short: "Clone of fzf with extended features",
 	Long:  `Clone of fzf with extended features`,
 	Run:   runRoot,
 }
 
-var lineOutput string
+var lineFormat string
 
 func init() {
-	//RootCmd.PersistentFlags().StringVar(&cfgFile, "line_output", "", "what will be the output of choosing a line (jq format)")
+	RootCmd.PersistentFlags().StringVar(&lineFormat, "line_format", "plain", "fnd will parse the lines according to this format (plain,json,tabular)")
 }
 
 func runRoot(cmd *cobra.Command, args []string) {
@@ -50,10 +50,23 @@ func runRoot(cmd *cobra.Command, args []string) {
 		Background(tcell.ColorBlack))
 	s.Clear()
 
-	lines := index.NewIndexedLines(index.CommandLineTokenizer(), index.PlainTextParser())
+	firstLine := ""
+	var scanner *bufio.Scanner
+	comesFromStdin := stdinHasPipe()
+	if comesFromStdin {
+		scanner = bufio.NewScanner(os.Stdin)
+		scanner.Scan()
+		firstLine = scanner.Text()
+	}
+	lines := index.NewIndexedLines(
+		index.CommandLineTokenizer(),
+		index.FormatNameToParser(lineFormat, firstLine),
+	)
+	if comesFromStdin && lineFormat != "tabular" {
+		lines.AddLine(firstLine)
+	}
 	go func() {
-		if stdinHasPipe() {
-			scanner := bufio.NewScanner(os.Stdin)
+		if comesFromStdin {
 			for scanner.Scan() {
 				lines.AddLine(scanner.Text())
 			}
@@ -68,6 +81,7 @@ func runRoot(cmd *cobra.Command, args []string) {
 		}
 	}()
 
+	time.Sleep(1 * time.Second)
 	initialState := events.SearchState{Query: "", Selected: 0}
 	printRows(s, initialState, &lines)
 	handleEvents(&lines, s, initialState)
@@ -105,7 +119,15 @@ func gitLs() []string {
 		//FIXME: log error
 		return []string{}
 	}
-	return strings.Split(string(out), "\n")
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	/*
+		fmt.Println("Begin")
+		for _, l := range lines {
+			fmt.Println(l)
+		}
+		fmt.Println("End")
+	*/
+	return lines
 }
 
 func isGitFolder() bool {
@@ -179,9 +201,9 @@ func printRows(s tcell.Screen, state events.SearchState, indexedLines *index.Ind
 
 	for i, l := range filtered {
 		if i == state.Selected {
-			sc.AppendRow(fmt.Sprintf(">  %s", l), 0, blink)
+			sc.AppendRow(fmt.Sprintf(">  %s", l.RawText), 0, blink)
 		} else {
-			sc.AppendRow(fmt.Sprintf("   %s", l), 0, plain)
+			sc.AppendRow(fmt.Sprintf("   %s", l.RawText), 0, plain)
 		}
 	}
 	sc.PrintAll(s)

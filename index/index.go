@@ -2,6 +2,7 @@ package index
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 )
 
@@ -10,12 +11,18 @@ import (
 // PerFieldWord2Doc: mapping from field to word2doc
 
 type Tokenizer = func(string) []string
-type Parser = func(string) map[string]interface{}
+
+type Parser struct {
+	headers []string
+	parse   func(string) map[string]interface{}
+}
+
 type Word2Doc = map[string]map[int]bool
 
 type Document struct {
-	index   int
-	rawText string
+	index      int
+	RawText    string
+	parsedLine map[string]interface{}
 }
 
 type PerFieldWord2Doc struct {
@@ -31,19 +38,68 @@ type IndexedLines struct {
 	parser    Parser
 }
 
-func PlainTextParser() Parser {
-	return func(s string) map[string]interface{} { return map[string]interface{}{"$": s} }
+func TabularParser(headers []string) Parser {
+	parse := func(line string) map[string]interface{} {
+		columns := strings.Fields(line)
+		result := map[string]interface{}{}
+		for i := 0; i < len(headers) && i < len(columns); i++ {
+			result[headers[i]] = columns[i]
+		}
+		return result
+	}
+	return Parser{
+		headers: headers,
+		parse:   parse,
+	}
 }
 
-func JsonParser() Parser {
-	return func(input string) map[string]interface{} {
+func FormatNameToParser(format string, firstline string) Parser {
+	switch format {
+	case "plain":
+		return PlainTextParser()
+	case "json":
 		m := map[string]interface{}{}
-		err := json.Unmarshal([]byte(input), &m)
+		err := json.Unmarshal([]byte(firstline), &m)
+		//FIXME: error handle
+		if err != nil {
+			panic("Failed parsing line as json")
+		}
+		headers := []string{}
+		for k, _ := range m {
+			headers = append(headers, k)
+		}
+		return JsonParser(headers)
+	case "tabular":
+		headers := strings.Fields(firstline)
+		return TabularParser(headers)
+	default:
+		//FIXME: decide once and for all how to handle errors
+		panic(fmt.Sprintf("format '%s' is not valid", format))
+	}
+
+}
+
+func PlainTextParser() Parser {
+	parse := func(line string) map[string]interface{} { return map[string]interface{}{"$": line} }
+	return Parser{
+		headers: []string{},
+		parse:   parse,
+	}
+}
+
+func JsonParser(headers []string) Parser {
+	parse := func(line string) map[string]interface{} {
+		m := map[string]interface{}{}
+		err := json.Unmarshal([]byte(line), &m)
 		//FIXME: if line cannot be parsed, just ignore, maybe log
 		if err != nil {
 			panic("Failed parsing line as json")
 		}
 		return m
+	}
+	return Parser{
+		headers: headers,
+		parse:   parse,
 	}
 }
 
@@ -84,8 +140,13 @@ func NewIndexedLines(tokenizer Tokenizer, parser Parser) IndexedLines {
 func (i *IndexedLines) AddLine(line string) {
 	docId := i.count // docId = index in array
 	i.lines = append(i.lines, line)
-	i.docs = append(i.docs, Document{rawText: line, index: docId})
-	index(line, &(i.index.perfieldWord2Doc), docId, i.tokenizer, i.parser)
+	m := i.parser.parse(line)
+	i.docs = append(i.docs, Document{
+		RawText:    line,
+		index:      docId,
+		parsedLine: m,
+	})
+	index(m, &(i.index.perfieldWord2Doc), docId, i.tokenizer, i.parser)
 	i.count++
 }
 
@@ -98,9 +159,8 @@ func (i *IndexedLines) AddLine(line string) {
 //        indexElem(elem)
 //   else:
 //      ignore element -> it ignores null, numbers and nested objects
-func index(input string, perfield *map[string]Word2Doc, docId int, tokenizer Tokenizer, parser Parser) {
-	m := parser(input)
-	for key, val := range m {
+func index(parsedLine map[string]interface{}, perfield *map[string]Word2Doc, docId int, tokenizer Tokenizer, parser Parser) {
+	for key, val := range parsedLine {
 		switch val.(type) {
 		case []interface{}:
 			arr := val.([]interface{})

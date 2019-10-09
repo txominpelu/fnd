@@ -1,6 +1,7 @@
 
 # fnd
 
+
 Quickly search through a list, choose elements. 
 
 fnd is heavily inspired by [fzf](https://github.com/junegunn/fzf) but with additional features:
@@ -38,7 +39,13 @@ Examples:
 - Open file with vi:
 
     ```
-    $> 
+    $> vi $(fnd)
+    ```
+
+- Pass tabular format (pass a table with a header and separated by spaces )
+
+    ```
+    $> ps | fnd --line_format tabular
     ```
 
 # Run it with

@@ -113,14 +113,14 @@ type SearchState struct {
 	Selected int
 }
 
-func (state SearchState) FilteredLines(lines *index.IndexedLines) []string {
+func (state SearchState) FilteredLines(lines *index.IndexedLines) []index.Document {
 	return lines.FilterEntries(state.Query)
 }
 
 func (state SearchState) Entry(lines *index.IndexedLines) string {
 	filtered := lines.FilterEntries(state.Query)
 	if state.Selected < len(filtered) {
-		return filtered[state.Selected]
+		return filtered[state.Selected].RawText
 	} else {
 		return ""
 	}

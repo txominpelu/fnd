@@ -5,7 +5,7 @@ import (
 )
 
 // Query
-func (i IndexedLines) FilterEntries(query string) []string {
+func (i IndexedLines) FilterEntries(query string) []Document {
 	if query != "" {
 		subQueries := parseQuery(query)
 		results := i.index.perfieldWord2Doc[subQueries[0].field][strings.ToLower(subQueries[0].query)]
@@ -13,7 +13,7 @@ func (i IndexedLines) FilterEntries(query string) []string {
 			if docs, ok := i.index.perfieldWord2Doc[sQ.field][strings.ToLower(sQ.query)]; ok {
 				results = intersection(results, docs)
 			} else {
-				return []string{}
+				return []Document{}
 			}
 		}
 		docIds := make([]int, len(results))
@@ -25,24 +25,20 @@ func (i IndexedLines) FilterEntries(query string) []string {
 			}
 		}
 		Sort(docIds, func(d1 int, d2 int) bool {
-			if len(i.docs[d1].rawText) != len(i.docs[d2].rawText) {
-				return len(i.docs[d1].rawText) < len(i.docs[d2].rawText)
+			if len(i.docs[d1].RawText) != len(i.docs[d2].RawText) {
+				return len(i.docs[d1].RawText) < len(i.docs[d2].RawText)
 			} else {
 				return d1 < d2
 			}
 		})
-		rawStrings := make([]string, len(docIds))
+		docs := make([]Document, len(docIds))
 		for j, docId := range docIds {
-			rawStrings[j] = i.docs[docId].rawText
+			docs[j] = i.docs[docId]
 		}
-		return rawStrings
+		return docs
 	}
 	// otherwise if no query all docs match
-	rawStrings := make([]string, len(i.docs))
-	for j, doc := range i.docs {
-		rawStrings[j] = doc.rawText
-	}
-	return rawStrings
+	return i.docs
 }
 
 func scoreFunction(subQueries []SubQuery, results map[int]bool, docs []Document) {
