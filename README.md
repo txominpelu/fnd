@@ -48,8 +48,11 @@ Examples:
     $> ps | fnd --line_format tabular
     ```
 
-# Run it with
-$(pipenv --py) run.py  | fzf --inline-info --preview 'echo {} | jq -r ".description" '
+- You can choose which column will be the output of the command. E.g this is how to kill the process that is chosen in fnd.
+
+    ```
+    $> ps | kill -9 $(fnd --line_format tabular --output_column PID)
+    ```
 
 # Use case 
 

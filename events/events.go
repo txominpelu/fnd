@@ -117,10 +117,10 @@ func (state SearchState) FilteredLines(lines *index.IndexedLines) []index.Docume
 	return lines.FilterEntries(state.Query)
 }
 
-func (state SearchState) Entry(lines *index.IndexedLines) string {
+func (state SearchState) Entry(lines *index.IndexedLines, outputColumn string) string {
 	filtered := lines.FilterEntries(state.Query)
 	if state.Selected < len(filtered) {
-		return filtered[state.Selected].RawText
+		return filtered[state.Selected].ParsedLine[outputColumn]
 	} else {
 		return ""
 	}

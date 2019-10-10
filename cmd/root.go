@@ -25,9 +25,11 @@ var RootCmd = &cobra.Command{
 }
 
 var lineFormat string
+var outputColumn string
 
 func init() {
 	RootCmd.PersistentFlags().StringVar(&lineFormat, "line_format", "plain", "fnd will parse the lines according to this format (plain,json,tabular)")
+	RootCmd.PersistentFlags().StringVar(&outputColumn, "output_column", "$", "column that will be used as output when picking an element ($ means it outputs the whole row)")
 }
 
 func runRoot(cmd *cobra.Command, args []string) {
@@ -85,7 +87,7 @@ func runRoot(cmd *cobra.Command, args []string) {
 	time.Sleep(1 * time.Second)
 	initialState := events.SearchState{Query: "", Selected: 0}
 	printRows(s, initialState, &lines, parser.Headers())
-	handleEvents(&lines, s, initialState, parser.Headers())
+	handleEvents(&lines, s, initialState, parser.Headers(), outputColumn)
 
 	s.Fini()
 }
@@ -145,7 +147,7 @@ func stdinHasPipe() bool {
 	return true
 }
 
-func handleEvents(lines *index.IndexedLines, s tcell.Screen, state events.SearchState, headers []string) {
+func handleEvents(lines *index.IndexedLines, s tcell.Screen, state events.SearchState, headers []string, outputColumn string) {
 	eventChannel := events.NewEventsChannel(s, "", lines)
 	ticker := time.NewTicker(500 * time.Millisecond)
 	for {
@@ -162,7 +164,7 @@ func handleEvents(lines *index.IndexedLines, s tcell.Screen, state events.Search
 				s.Sync()
 			case events.EntryFinalSelectEvent:
 				finalSelectEvt := ev.(events.EntryFinalSelectEvent)
-				fmt.Printf(finalSelectEvt.State().Entry(lines))
+				fmt.Printf(finalSelectEvt.State().Entry(lines, outputColumn))
 				close(eventChannel)
 				return
 			case events.EscapeEvent:

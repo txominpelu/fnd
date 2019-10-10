@@ -157,6 +157,7 @@ func (i *IndexedLines) AddLine(line string) {
 		}
 
 	}
+	parsedLine["$"] = line
 	i.docs = append(i.docs, Document{
 		RawText:    line,
 		index:      docId,
