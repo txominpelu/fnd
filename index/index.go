@@ -17,12 +17,16 @@ type Parser struct {
 	parse   func(string) map[string]interface{}
 }
 
+func (p Parser) Headers() []string {
+	return p.headers
+}
+
 type Word2Doc = map[string]map[int]bool
 
 type Document struct {
 	index      int
 	RawText    string
-	parsedLine map[string]interface{}
+	ParsedLine map[string]string
 }
 
 type PerFieldWord2Doc struct {
@@ -82,7 +86,7 @@ func FormatNameToParser(format string, firstline string) Parser {
 func PlainTextParser() Parser {
 	parse := func(line string) map[string]interface{} { return map[string]interface{}{"$": line} }
 	return Parser{
-		headers: []string{},
+		headers: []string{"$"},
 		parse:   parse,
 	}
 }
@@ -141,10 +145,22 @@ func (i *IndexedLines) AddLine(line string) {
 	docId := i.count // docId = index in array
 	i.lines = append(i.lines, line)
 	m := i.parser.parse(line)
+	parsedLine := map[string]string{}
+	for k, interf := range m {
+		switch v := interf.(type) {
+		case int:
+			parsedLine[k] = fmt.Sprintf("%d", v)
+		case string:
+			parsedLine[k] = v
+		default:
+			parsedLine[k] = fmt.Sprintf("%v", v)
+		}
+
+	}
 	i.docs = append(i.docs, Document{
 		RawText:    line,
 		index:      docId,
-		parsedLine: m,
+		ParsedLine: parsedLine,
 	})
 	index(m, &(i.index.perfieldWord2Doc), docId, i.tokenizer, i.parser)
 	i.count++

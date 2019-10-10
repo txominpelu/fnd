@@ -58,9 +58,10 @@ func runRoot(cmd *cobra.Command, args []string) {
 		scanner.Scan()
 		firstLine = scanner.Text()
 	}
+	parser := index.FormatNameToParser(lineFormat, firstLine)
 	lines := index.NewIndexedLines(
 		index.CommandLineTokenizer(),
-		index.FormatNameToParser(lineFormat, firstLine),
+		parser,
 	)
 	if comesFromStdin && lineFormat != "tabular" {
 		lines.AddLine(firstLine)
@@ -83,8 +84,8 @@ func runRoot(cmd *cobra.Command, args []string) {
 
 	time.Sleep(1 * time.Second)
 	initialState := events.SearchState{Query: "", Selected: 0}
-	printRows(s, initialState, &lines)
-	handleEvents(&lines, s, initialState)
+	printRows(s, initialState, &lines, parser.Headers())
+	handleEvents(&lines, s, initialState, parser.Headers())
 
 	s.Fini()
 }
@@ -120,13 +121,6 @@ func gitLs() []string {
 		return []string{}
 	}
 	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
-	/*
-		fmt.Println("Begin")
-		for _, l := range lines {
-			fmt.Println(l)
-		}
-		fmt.Println("End")
-	*/
 	return lines
 }
 
@@ -151,19 +145,19 @@ func stdinHasPipe() bool {
 	return true
 }
 
-func handleEvents(lines *index.IndexedLines, s tcell.Screen, state events.SearchState) {
+func handleEvents(lines *index.IndexedLines, s tcell.Screen, state events.SearchState, headers []string) {
 	eventChannel := events.NewEventsChannel(s, "", lines)
 	ticker := time.NewTicker(500 * time.Millisecond)
 	for {
 		select {
 		case <-ticker.C:
-			printRows(s, state, lines)
+			printRows(s, state, lines, headers)
 		case ev := <-eventChannel:
 			state = ev.State()
 			switch ev.(type) {
 			case events.SearchStateChanged:
 				qChangedEv := ev.(events.SearchStateChanged)
-				printRows(s, qChangedEv.State(), lines)
+				printRows(s, qChangedEv.State(), lines, headers)
 			case events.ScreenResizeEvent:
 				s.Sync()
 			case events.EntryFinalSelectEvent:
@@ -186,7 +180,7 @@ func handleEvents(lines *index.IndexedLines, s tcell.Screen, state events.Search
 //	{{fi}}
 //  {{^lines}}
 
-func printRows(s tcell.Screen, state events.SearchState, indexedLines *index.IndexedLines) {
+func printRows(s tcell.Screen, state events.SearchState, indexedLines *index.IndexedLines, headers []string) {
 	s.Clear()
 	w, h := s.Size()
 	plain := tcell.StyleDefault
@@ -199,13 +193,11 @@ func printRows(s tcell.Screen, state events.SearchState, indexedLines *index.Ind
 	filtered := state.FilteredLines(indexedLines)
 	sc.AppendRow(fmt.Sprintf("  %d/%d ", len(filtered), indexedLines.Count()), 0, bold)
 
-	for i, l := range filtered {
-		if i == state.Selected {
-			sc.AppendRow(fmt.Sprintf(">  %s", l.RawText), 0, blink)
-		} else {
-			sc.AppendRow(fmt.Sprintf("   %s", l.RawText), 0, plain)
-		}
+	t := screen.NewTable(headers)
+	for _, l := range filtered {
+		t.AddRow(l.ParsedLine)
 	}
+	t.WriteToScreen(&sc, state.Selected, plain, blink, bold)
 	sc.PrintAll(s)
 
 	s.Sync()

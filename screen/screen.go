@@ -1,6 +1,10 @@
 package screen
 
-import "github.com/gdamore/tcell"
+import (
+	"strings"
+
+	"github.com/gdamore/tcell"
+)
 
 type ContentBlock struct {
 	r     rune
@@ -66,4 +70,27 @@ func (sc *Screen) PrintAll(s tcell.Screen) {
 			s.SetContent(x, sc.height-(y+1), b.r, []rune{}, b.style)
 		}
 	}
+}
+
+//To facilitate debug
+func (sc *Screen) toString() string {
+	all := [][]string{}
+	for i := 0; i < sc.height; i++ {
+		emptyRow := make([]string, sc.width)
+		for j := 0; j < sc.width; j++ {
+			emptyRow[j] = " "
+		}
+		all = append(all, emptyRow)
+	}
+	for y, r := range sc.rows {
+		for x, b := range r.blocks {
+			all[sc.height-(y+1)][x] = string(b.r)
+		}
+	}
+	s := strings.Builder{}
+	for _, l := range all {
+		s.WriteString(strings.Join(l, ""))
+		s.WriteString("\n")
+	}
+	return s.String()
 }
