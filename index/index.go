@@ -47,7 +47,12 @@ func TabularParser(headers []string) Parser {
 		columns := strings.Fields(line)
 		result := map[string]interface{}{}
 		for i := 0; i < len(headers) && i < len(columns); i++ {
-			result[headers[i]] = columns[i]
+			if i == len(headers)-1 {
+				//for the last column take everything that's left
+				result[headers[i]] = strings.Join(columns[i:], " ")
+			} else {
+				result[headers[i]] = columns[i]
+			}
 		}
 		return result
 	}

@@ -1,6 +1,8 @@
 
 TODO:
 
+- Tokenize queries main.go should search for query and go (or define expectations for search altogether)
+- Scroll up and down through results
 - Parse whole string and allow jq path selection for json instead of parsing line by line
 - Show header other than $ in plain text format
 - Try the trie to avoid having to match exactly on word
