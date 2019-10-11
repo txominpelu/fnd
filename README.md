@@ -54,8 +54,7 @@ Examples:
     $> ps | kill -9 $(fnd --line_format tabular --output_column PID)
     ```
 
-# Use case 
 
-```
-fnd --see '.description' --query 'description:hello'
-```
+# Examples
+
+See at [commands/](commands/)
