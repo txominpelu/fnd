@@ -3,18 +3,23 @@ package cmd
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"net/http"
+	_ "net/http/pprof"
+
 	"github.com/gdamore/tcell"
 	"github.com/gdamore/tcell/encoding"
 	"github.com/spf13/cobra"
 	"github.com/txominpelu/fnd/events"
-	"github.com/txominpelu/fnd/index"
 	"github.com/txominpelu/fnd/screen"
+	"github.com/txominpelu/fnd/search"
+	"github.com/txominpelu/fnd/search/index"
 )
 
 var RootCmd = &cobra.Command{
@@ -60,7 +65,7 @@ func runRoot(cmd *cobra.Command, args []string) {
 		scanner.Scan()
 		firstLine = scanner.Text()
 	}
-	parser := index.FormatNameToParser(lineFormat, firstLine)
+	parser := search.FormatNameToParser(lineFormat, firstLine)
 	lines := index.NewIndexedLines(
 		index.CommandLineTokenizer(),
 		parser,
@@ -68,6 +73,10 @@ func runRoot(cmd *cobra.Command, args []string) {
 	if comesFromStdin && lineFormat != "tabular" {
 		lines.AddLine(firstLine)
 	}
+
+	go func() {
+		log.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
 	go func() {
 		if comesFromStdin {
 			for scanner.Scan() {
@@ -84,7 +93,6 @@ func runRoot(cmd *cobra.Command, args []string) {
 		}
 	}()
 
-	time.Sleep(1 * time.Second)
 	initialState := events.SearchState{Query: "", Selected: 0}
 	printRows(s, initialState, &lines, parser.Headers())
 	handleEvents(&lines, s, initialState, parser.Headers(), outputColumn)

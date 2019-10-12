@@ -8,7 +8,8 @@ import (
 
 	"github.com/gdamore/tcell"
 	"github.com/gdamore/tcell/encoding"
-	"github.com/txominpelu/fnd/index"
+	"github.com/txominpelu/fnd/search"
+	"github.com/txominpelu/fnd/search/index"
 )
 
 func TestQueryAndChangeSelect(t *testing.T) {
@@ -21,7 +22,7 @@ func TestQueryAndChangeSelect(t *testing.T) {
 	lines := []string{"hello", "hello world", "hellod", "helloll"}
 	indexedLines := index.NewIndexedLines(
 		index.CommandLineTokenizer(),
-		index.PlainTextParser(),
+		search.PlainTextParser(),
 	)
 	for _, l := range lines {
 		indexedLines.AddLine(l)
@@ -69,7 +70,7 @@ func TestSelectGoesZero(t *testing.T) {
 	lines := []string{"hello", "hellos", "hellod", "helloll"}
 	indexedLines := index.NewIndexedLines(
 		index.CommandLineTokenizer(),
-		index.PlainTextParser(),
+		search.PlainTextParser(),
 	)
 	for _, l := range lines {
 		indexedLines.AddLine(l)

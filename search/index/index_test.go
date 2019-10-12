@@ -3,10 +3,12 @@ package index
 import (
 	"reflect"
 	"testing"
+
+	"github.com/txominpelu/fnd/search"
 )
 
 func TestBasicQuery(t *testing.T) {
-	lines := NewIndexedLines(CommandLineTokenizer(), PlainTextParser())
+	lines := NewIndexedLines(CommandLineTokenizer(), search.PlainTextParser())
 	lines.AddLine("hello world")
 	lines.AddLine("this is the best WOrld")
 	lines.AddLine("this won't match")

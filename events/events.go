@@ -4,10 +4,10 @@ import (
 	"fmt"
 
 	"github.com/gdamore/tcell"
-	"github.com/txominpelu/fnd/index"
+	"github.com/txominpelu/fnd/search"
 )
 
-func NewEventsChannel(s tcell.Screen, query string, indexedLines *index.IndexedLines) chan Event {
+func NewEventsChannel(s tcell.Screen, query string, searcher search.TextSearcher) chan Event {
 	out := make(chan Event)
 	st := SearchState{query, 0}
 	notifier := StateChangeNotifier{currentState: st, notifyChan: out}
@@ -25,7 +25,7 @@ func NewEventsChannel(s tcell.Screen, query string, indexedLines *index.IndexedL
 					notifier.triggerSelect()
 					break
 				case tcell.KeyUp:
-					if notifier.currentState.Selected+1 < len(notifier.currentState.FilteredLines(indexedLines)) {
+					if notifier.currentState.Selected+1 < len(notifier.currentState.FilteredLines(searcher)) {
 						notifier.setSelected(notifier.currentState.Selected + 1)
 					}
 				case tcell.KeyDown:
@@ -34,14 +34,14 @@ func NewEventsChannel(s tcell.Screen, query string, indexedLines *index.IndexedL
 					}
 				case tcell.KeyDEL:
 					if len(notifier.currentState.Query) > 0 {
-						notifier.setQuery(notifier.currentState.Query[:len(notifier.currentState.Query)-1], indexedLines)
+						notifier.setQuery(notifier.currentState.Query[:len(notifier.currentState.Query)-1], searcher)
 					}
 				case tcell.KeyBS:
 					if len(notifier.currentState.Query) > 0 {
-						notifier.setQuery(notifier.currentState.Query[:len(notifier.currentState.Query)-1], indexedLines)
+						notifier.setQuery(notifier.currentState.Query[:len(notifier.currentState.Query)-1], searcher)
 					}
 				case tcell.KeyRune:
-					notifier.setQuery(fmt.Sprintf("%s%c", notifier.currentState.Query, ev.Rune()), indexedLines)
+					notifier.setQuery(fmt.Sprintf("%s%c", notifier.currentState.Query, ev.Rune()), searcher)
 				}
 			case *tcell.EventResize:
 				notifier.triggerResize()
@@ -66,12 +66,12 @@ func (s *StateChangeNotifier) setSelected(selected int) {
 	}
 }
 
-func (s *StateChangeNotifier) setQuery(query string, indexedLines *index.IndexedLines) {
+func (s *StateChangeNotifier) setQuery(query string, searcher search.TextSearcher) {
 	if s.currentState.Query != query {
 		s.change(func(newState *SearchState) {
 			(*newState).Query = query
 		})
-		filteredEntries := s.currentState.FilteredLines(indexedLines)
+		filteredEntries := s.currentState.FilteredLines(searcher)
 		if len(filteredEntries) <= s.currentState.Selected {
 			s.setSelected(0)
 		}
@@ -113,12 +113,12 @@ type SearchState struct {
 	Selected int
 }
 
-func (state SearchState) FilteredLines(lines *index.IndexedLines) []index.Document {
-	return lines.FilterEntries(state.Query)
+func (state SearchState) FilteredLines(searcher search.TextSearcher) []search.Document {
+	return searcher.FilterEntries(state.Query)
 }
 
-func (state SearchState) Entry(lines *index.IndexedLines, outputColumn string) string {
-	filtered := lines.FilterEntries(state.Query)
+func (state SearchState) Entry(searcher search.TextSearcher, outputColumn string) string {
+	filtered := searcher.FilterEntries(state.Query)
 	if state.Selected < len(filtered) {
 		return filtered[state.Selected].ParsedLine[outputColumn]
 	} else {

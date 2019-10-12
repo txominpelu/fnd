@@ -2,10 +2,12 @@ package index
 
 import (
 	"strings"
+
+	"github.com/txominpelu/fnd/search"
 )
 
 // Query
-func (i IndexedLines) FilterEntries(query string) []Document {
+func (i IndexedLines) FilterEntries(query string) []search.Document {
 	if query != "" {
 		subQueries := parseQuery(query)
 		results := i.index.perfieldWord2Doc[subQueries[0].field][strings.ToLower(subQueries[0].query)]
@@ -13,7 +15,7 @@ func (i IndexedLines) FilterEntries(query string) []Document {
 			if docs, ok := i.index.perfieldWord2Doc[sQ.field][strings.ToLower(sQ.query)]; ok {
 				results = intersection(results, docs)
 			} else {
-				return []Document{}
+				return []search.Document{}
 			}
 		}
 		docIds := make([]int, len(results))
@@ -31,7 +33,7 @@ func (i IndexedLines) FilterEntries(query string) []Document {
 				return d1 < d2
 			}
 		})
-		docs := make([]Document, len(docIds))
+		docs := make([]search.Document, len(docIds))
 		for j, docId := range docIds {
 			docs[j] = i.docs[docId]
 		}
@@ -41,7 +43,7 @@ func (i IndexedLines) FilterEntries(query string) []Document {
 	return i.docs
 }
 
-func scoreFunction(subQueries []SubQuery, results map[int]bool, docs []Document) {
+func scoreFunction(subQueries []SubQuery, results map[int]bool, docs []search.Document) {
 	return
 
 }
