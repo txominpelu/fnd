@@ -48,13 +48,13 @@ type IndexedLines struct {
 	tokenizer Tokenizer
 }
 
-func NewIndexedLines(tokenizer Tokenizer) IndexedLines {
+func NewIndexedLines(tokenizer Tokenizer) *IndexedLines {
 	i := IndexedLines{}
 	if i.index.perfieldWord2Doc == nil {
 		i.index = PerFieldWord2Doc{perfieldWord2Doc: map[string]Word2Doc{}}
 	}
 	i.tokenizer = tokenizer
-	return i
+	return &i
 }
 
 func (i *IndexedLines) AddDocument(doc search.Document) {

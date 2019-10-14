@@ -9,8 +9,8 @@ type FuzzySearcher struct {
 	docIds []int
 }
 
-func NewFuzzySearcher() FuzzySearcher {
-	return FuzzySearcher{
+func NewFuzzySearcher() *FuzzySearcher {
+	return &FuzzySearcher{
 		docs:   []search.Document{},
 		docIds: []int{},
 	}

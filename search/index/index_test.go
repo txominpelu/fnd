@@ -23,7 +23,7 @@ func TestBasicQuery(t *testing.T) {
 	}
 	gotDocs := search.SortDocuments(
 		indexedLines.FilterEntries(search.ParseQuery("world")),
-		&indexedLines,
+		indexedLines,
 	)
 	got := make([]string, len(gotDocs))
 	for i, d := range gotDocs {

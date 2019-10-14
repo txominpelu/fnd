@@ -23,7 +23,7 @@ func TestFuzzy(t *testing.T) {
 	}
 	gotDocs := search.SortDocuments(
 		fuzzySearcher.FilterEntries(search.ParseQuery("bc")),
-		&fuzzySearcher,
+		fuzzySearcher,
 	)
 	got := make([]string, len(gotDocs))
 	for i, d := range gotDocs {
@@ -50,7 +50,7 @@ func TestUpperCase(t *testing.T) {
 	}
 	gotDocs := search.SortDocuments(
 		fuzzySearcher.FilterEntries(search.ParseQuery("bc")),
-		&fuzzySearcher,
+		fuzzySearcher,
 	)
 	got := make([]string, len(gotDocs))
 	for i, d := range gotDocs {

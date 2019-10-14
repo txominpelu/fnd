@@ -11,8 +11,8 @@ type SubQuery struct {
 // they should all match (AND)
 func ParseQuery(query string) []SubQuery {
 	subqueryStrings := strings.Split(query, " ")
-	subqueries := make([]SubQuery, len(subqueryStrings))
-	for i, s := range subqueryStrings {
+	subqueries := []SubQuery{}
+	for _, s := range subqueryStrings {
 		subQuery := SubQuery{
 			Field: "$",
 			Query: strings.ToLower(s),
@@ -23,7 +23,9 @@ func ParseQuery(query string) []SubQuery {
 			subQuery.Field = fieldQuery[0]
 			subQuery.Query = strings.ToLower(fieldQuery[1])
 		}
-		subqueries[i] = subQuery
+		if subQuery.Query != "" {
+			subqueries = append(subqueries, subQuery)
+		}
 	}
 	return subqueries
 }

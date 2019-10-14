@@ -26,7 +26,7 @@ func TestQueryAndChangeSelect(t *testing.T) {
 	for _, l := range lines {
 		indexedLines.AddDocument(search.ParseLine(search.PlainTextParser(), l))
 	}
-	eventChannel := NewEventsChannel(s, "", &indexedLines)
+	eventChannel := NewEventsChannel(s, "", indexedLines)
 	go func() {
 		s.PostEvent(tcell.NewEventKey(tcell.KeyRune, 'h', tcell.ModNone))
 		s.PostEvent(tcell.NewEventKey(tcell.KeyRune, 'e', tcell.ModNone))
@@ -73,7 +73,7 @@ func TestSelectGoesZero(t *testing.T) {
 	for _, l := range lines {
 		indexedLines.AddDocument(search.ParseLine(search.PlainTextParser(), l))
 	}
-	eventChannel := NewEventsChannel(s, "", &indexedLines)
+	eventChannel := NewEventsChannel(s, "", indexedLines)
 	go func() {
 		s.PostEvent(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
 		s.PostEvent(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))

@@ -3,15 +3,11 @@ package cmd
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
-
-	"net/http"
-	_ "net/http/pprof"
 
 	"github.com/gdamore/tcell"
 	"github.com/gdamore/tcell/encoding"
@@ -20,6 +16,7 @@ import (
 	"github.com/txominpelu/fnd/screen"
 	"github.com/txominpelu/fnd/search"
 	"github.com/txominpelu/fnd/search/fuzzy"
+	"github.com/txominpelu/fnd/search/index"
 )
 
 var RootCmd = &cobra.Command{
@@ -31,10 +28,12 @@ var RootCmd = &cobra.Command{
 
 var lineFormat string
 var outputColumn string
+var searchType string
 
 func init() {
 	RootCmd.PersistentFlags().StringVar(&lineFormat, "line_format", "plain", "fnd will parse the lines according to this format (plain,json,tabular)")
 	RootCmd.PersistentFlags().StringVar(&outputColumn, "output_column", "$", "column that will be used as output when picking an element ($ means it outputs the whole row)")
+	RootCmd.PersistentFlags().StringVar(&searchType, "search_type", "fuzzy", "type of search (indexed, fuzzy). Indexed is faster for bigger input, fuzzy for finding more matches")
 }
 
 func runRoot(cmd *cobra.Command, args []string) {
@@ -66,18 +65,22 @@ func runRoot(cmd *cobra.Command, args []string) {
 		firstLine = scanner.Text()
 	}
 	parser := search.FormatNameToParser(lineFormat, firstLine)
-	lines := fuzzy.NewFuzzySearcher()
+	var searcher search.TextSearcher
+	if searchType == "indexed" {
+		searcher = index.NewIndexedLines(index.CommandLineTokenizer())
+	} else if searchType == "fuzzy" {
+		searcher = fuzzy.NewFuzzySearcher()
+	} else {
+		panic(fmt.Sprintf("search_type should be one of (indexed / fuzzy) it was '%s'", searchType))
+	}
 	if comesFromStdin && lineFormat != "tabular" {
-		lines.AddDocument(search.ParseLine(parser, firstLine))
+		searcher.AddDocument(search.ParseLine(parser, firstLine))
 	}
 
 	go func() {
-		log.Println(http.ListenAndServe("localhost:6060", nil))
-	}()
-	go func() {
 		if comesFromStdin {
 			for scanner.Scan() {
-				lines.AddDocument(search.ParseLine(parser, scanner.Text()))
+				searcher.AddDocument(search.ParseLine(parser, scanner.Text()))
 			}
 			if err := scanner.Err(); err != nil {
 				panic(fmt.Sprintf("Error: %s while reading stdin", err))
@@ -85,14 +88,14 @@ func runRoot(cmd *cobra.Command, args []string) {
 		} else {
 			filesChannel := listFiles()
 			for line := range filesChannel {
-				lines.AddDocument(search.ParseLine(parser, line))
+				searcher.AddDocument(search.ParseLine(parser, line))
 			}
 		}
 	}()
 
 	initialState := events.SearchState{Query: "", Selected: 0}
-	printRows(s, initialState, &lines, parser.Headers())
-	handleEvents(&lines, s, initialState, parser.Headers(), outputColumn)
+	printRows(s, initialState, &searcher, parser.Headers())
+	handleEvents(&searcher, s, initialState, parser.Headers(), outputColumn)
 
 	s.Fini()
 }
@@ -152,24 +155,24 @@ func stdinHasPipe() bool {
 	return true
 }
 
-func handleEvents(lines search.TextSearcher, s tcell.Screen, state events.SearchState, headers []string, outputColumn string) {
-	eventChannel := events.NewEventsChannel(s, "", lines)
+func handleEvents(searcher *search.TextSearcher, s tcell.Screen, state events.SearchState, headers []string, outputColumn string) {
+	eventChannel := events.NewEventsChannel(s, "", *searcher)
 	ticker := time.NewTicker(500 * time.Millisecond)
 	for {
 		select {
 		case <-ticker.C:
-			printRows(s, state, lines, headers)
+			printRows(s, state, searcher, headers)
 		case ev := <-eventChannel:
 			state = ev.State()
 			switch ev.(type) {
 			case events.SearchStateChanged:
 				qChangedEv := ev.(events.SearchStateChanged)
-				printRows(s, qChangedEv.State(), lines, headers)
+				printRows(s, qChangedEv.State(), searcher, headers)
 			case events.ScreenResizeEvent:
 				s.Sync()
 			case events.EntryFinalSelectEvent:
 				finalSelectEvt := ev.(events.EntryFinalSelectEvent)
-				fmt.Printf(finalSelectEvt.State().Entry(lines, outputColumn))
+				fmt.Printf(finalSelectEvt.State().Entry(*searcher, outputColumn))
 				close(eventChannel)
 				return
 			case events.EscapeEvent:
@@ -187,7 +190,7 @@ func handleEvents(lines search.TextSearcher, s tcell.Screen, state events.Search
 //	{{fi}}
 //  {{^lines}}
 
-func printRows(s tcell.Screen, state events.SearchState, indexedLines search.TextSearcher, headers []string) {
+func printRows(s tcell.Screen, state events.SearchState, searcher *search.TextSearcher, headers []string) {
 	s.Clear()
 	w, h := s.Size()
 	plain := tcell.StyleDefault
@@ -197,8 +200,8 @@ func printRows(s tcell.Screen, state events.SearchState, indexedLines search.Tex
 	sc := screen.NewScreen(w, h)
 	sc.AppendRow(fmt.Sprintf("> %s", state.Query), 0, bold)
 
-	filtered := state.FilteredLines(indexedLines)
-	sc.AppendRow(fmt.Sprintf("  %d/%d ", len(filtered), indexedLines.Count()), 0, bold)
+	filtered := state.FilteredLines(*searcher)
+	sc.AppendRow(fmt.Sprintf("  %d/%d ", len(filtered), (*searcher).Count()), 0, bold)
 
 	t := screen.NewTable(headers)
 	for _, l := range filtered {
