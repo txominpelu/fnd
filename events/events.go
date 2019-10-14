@@ -114,11 +114,14 @@ type SearchState struct {
 }
 
 func (state SearchState) FilteredLines(searcher search.TextSearcher) []search.Document {
-	return searcher.FilterEntries(state.Query)
+	return search.SortDocuments(
+		searcher.FilterEntries(search.ParseQuery(state.Query)),
+		searcher,
+	)
 }
 
 func (state SearchState) Entry(searcher search.TextSearcher, outputColumn string) string {
-	filtered := searcher.FilterEntries(state.Query)
+	filtered := state.FilteredLines(searcher)
 	if state.Selected < len(filtered) {
 		return filtered[state.Selected].ParsedLine[outputColumn]
 	} else {

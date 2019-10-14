@@ -1,7 +1,6 @@
 package index
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/txominpelu/fnd/search"
@@ -42,51 +41,32 @@ type PerFieldWord2Doc struct {
 }
 
 type IndexedLines struct {
-	lines     []string
 	count     int
 	index     PerFieldWord2Doc
 	docs      []search.Document
+	docIds    []int
 	tokenizer Tokenizer
-	parser    search.Parser
 }
 
-func NewIndexedLines(tokenizer Tokenizer, parser search.Parser) IndexedLines {
+func NewIndexedLines(tokenizer Tokenizer) IndexedLines {
 	i := IndexedLines{}
-	if i.lines == nil {
-		i.lines = []string{}
-	}
 	if i.index.perfieldWord2Doc == nil {
 		i.index = PerFieldWord2Doc{perfieldWord2Doc: map[string]Word2Doc{}}
 	}
 	i.tokenizer = tokenizer
-	i.parser = parser
 	return i
 }
 
-func (i *IndexedLines) AddLine(line string) {
+func (i *IndexedLines) AddDocument(doc search.Document) {
 	docId := i.count // docId = index in array
-	i.lines = append(i.lines, line)
-	m := i.parser.Parse()(line)
-	parsedLine := map[string]string{}
-	for k, interf := range m {
-		switch v := interf.(type) {
-		case int:
-			parsedLine[k] = fmt.Sprintf("%d", v)
-		case string:
-			parsedLine[k] = v
-		default:
-			parsedLine[k] = fmt.Sprintf("%v", v)
-		}
-
-	}
-	parsedLine["$"] = line
-	i.docs = append(i.docs, search.Document{
-		RawText:    line,
-		ID:         docId,
-		ParsedLine: parsedLine,
-	})
-	index(m, &(i.index.perfieldWord2Doc), docId, i.tokenizer, i.parser)
+	i.docs = append(i.docs, doc)
+	i.docIds = append(i.docIds, docId)
+	index(doc.ParsedLine, &(i.index.perfieldWord2Doc), docId, i.tokenizer)
 	i.count++
+}
+
+func (i *IndexedLines) GetDocById(docId int) search.Document {
+	return i.docs[docId]
 }
 
 // it expects one json object
@@ -98,20 +78,9 @@ func (i *IndexedLines) AddLine(line string) {
 //        indexElem(elem)
 //   else:
 //      ignore element -> it ignores null, numbers and nested objects
-func index(parsedLine map[string]interface{}, perfield *map[string]Word2Doc, docId int, tokenizer Tokenizer, parser search.Parser) {
+func index(parsedLine map[string]string, perfield *map[string]Word2Doc, docId int, tokenizer Tokenizer) {
 	for key, val := range parsedLine {
-		switch val.(type) {
-		case []interface{}:
-			arr := val.([]interface{})
-			for _, r := range arr {
-				indexElem(perfield, key, r, docId, tokenizer)
-				indexElem(perfield, "$", r, docId, tokenizer)
-			}
-		default:
-			indexElem(perfield, key, val, docId, tokenizer)
-			indexElem(perfield, "$", val, docId, tokenizer)
-
-		}
+		indexElem(perfield, key, val, docId, tokenizer)
 	}
 }
 

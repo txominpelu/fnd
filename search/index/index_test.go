@@ -8,16 +8,23 @@ import (
 )
 
 func TestBasicQuery(t *testing.T) {
-	lines := NewIndexedLines(CommandLineTokenizer(), search.PlainTextParser())
-	lines.AddLine("hello world")
-	lines.AddLine("this is the best WOrld")
-	lines.AddLine("this won't match")
+	indexedLines := NewIndexedLines(CommandLineTokenizer())
+	lines := []string{
+		"hello world",
+		"this is the best WOrld",
+		"this won't match",
+	}
+	for _, l := range lines {
+		indexedLines.AddDocument(search.ParseLine(search.PlainTextParser(), l))
+	}
 	expected := []string{
 		"hello world",
 		"this is the best WOrld",
 	}
-
-	gotDocs := lines.FilterEntries("world")
+	gotDocs := search.SortDocuments(
+		indexedLines.FilterEntries(search.ParseQuery("world")),
+		&indexedLines,
+	)
 	got := make([]string, len(gotDocs))
 	for i, d := range gotDocs {
 		got[i] = d.RawText

@@ -68,10 +68,9 @@ func runRoot(cmd *cobra.Command, args []string) {
 	parser := search.FormatNameToParser(lineFormat, firstLine)
 	lines := index.NewIndexedLines(
 		index.CommandLineTokenizer(),
-		parser,
 	)
 	if comesFromStdin && lineFormat != "tabular" {
-		lines.AddLine(firstLine)
+		lines.AddDocument(search.ParseLine(parser, firstLine))
 	}
 
 	go func() {
@@ -80,7 +79,7 @@ func runRoot(cmd *cobra.Command, args []string) {
 	go func() {
 		if comesFromStdin {
 			for scanner.Scan() {
-				lines.AddLine(scanner.Text())
+				lines.AddDocument(search.ParseLine(parser, scanner.Text()))
 			}
 			if err := scanner.Err(); err != nil {
 				panic(fmt.Sprintf("Error: %s while reading stdin", err))
@@ -88,7 +87,7 @@ func runRoot(cmd *cobra.Command, args []string) {
 		} else {
 			filesChannel := listFiles()
 			for line := range filesChannel {
-				lines.AddLine(line)
+				lines.AddDocument(search.ParseLine(parser, line))
 			}
 		}
 	}()

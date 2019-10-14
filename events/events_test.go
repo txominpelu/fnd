@@ -22,10 +22,9 @@ func TestQueryAndChangeSelect(t *testing.T) {
 	lines := []string{"hello", "hello world", "hellod", "helloll"}
 	indexedLines := index.NewIndexedLines(
 		index.CommandLineTokenizer(),
-		search.PlainTextParser(),
 	)
 	for _, l := range lines {
-		indexedLines.AddLine(l)
+		indexedLines.AddDocument(search.ParseLine(search.PlainTextParser(), l))
 	}
 	eventChannel := NewEventsChannel(s, "", &indexedLines)
 	go func() {
@@ -70,10 +69,9 @@ func TestSelectGoesZero(t *testing.T) {
 	lines := []string{"hello", "hellos", "hellod", "helloll"}
 	indexedLines := index.NewIndexedLines(
 		index.CommandLineTokenizer(),
-		search.PlainTextParser(),
 	)
 	for _, l := range lines {
-		indexedLines.AddLine(l)
+		indexedLines.AddDocument(search.ParseLine(search.PlainTextParser(), l))
 	}
 	eventChannel := NewEventsChannel(s, "", &indexedLines)
 	go func() {
