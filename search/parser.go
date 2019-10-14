@@ -112,6 +112,7 @@ func ParseLine(parser Parser, line string) Document {
 		loweredParsed[k] = strings.ToLower(parsedLine[k])
 	}
 	parsedLine["$"] = line
+	loweredParsed["$"] = strings.ToLower(line)
 	return Document{
 		RawText: line,
 		//only one level key, value
