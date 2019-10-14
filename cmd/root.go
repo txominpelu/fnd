@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"text/template"
 	"time"
 
 	"github.com/gdamore/tcell"
@@ -35,7 +34,7 @@ var displayColumns []string
 
 func init() {
 	RootCmd.PersistentFlags().StringVar(&lineFormat, "line_format", "plain", "fnd will parse the lines according to this format (plain,json,tabular)")
-	RootCmd.PersistentFlags().StringVar(&outputColumn, "output_column", "", "column that will be used as output when picking an element ($ means it outputs the whole row)")
+	RootCmd.PersistentFlags().StringVar(&outputColumn, "output_column", "$", "column that will be used as output when picking an element ($ means it outputs the whole row)")
 	RootCmd.PersistentFlags().StringVar(&outputTemplate, "output_template", "", "golang template for the output: e.g {{.PID}} means return PID field")
 	RootCmd.PersistentFlags().StringVar(&searchType, "search_type", "fuzzy", "type of search (indexed, fuzzy). Indexed is faster for bigger input, fuzzy for finding more matches")
 	RootCmd.PersistentFlags().StringSliceVar(&displayColumns, "display_columns", []string{}, "comma separated list of columns to display in order")
@@ -51,6 +50,10 @@ func runRoot(cmd *cobra.Command, args []string) {
 		scanner.Scan()
 		firstLine = scanner.Text()
 	}
+	//logger := log.NewLogger(func() {})
+	//err := fmt.Errorf("Failed")
+	//logger.CheckError(err, "When starting")
+
 	parser := search.FormatNameToParser(lineFormat, firstLine, displayColumns)
 	var searcher search.TextSearcher
 	if searchType == "indexed" {
@@ -81,23 +84,12 @@ func runRoot(cmd *cobra.Command, args []string) {
 	}()
 
 	initialState := events.SearchState{Query: "", Selected: 0}
-	outputCompiledTmpl := compileTemplate(outputColumn, outputTemplate)
+	renderer := getRenderer(outputColumn, outputTemplate)
 	s := initScreen()
 	printRows(s, initialState, &searcher, parser.Headers())
-	handleEvents(&searcher, s, initialState, parser.Headers(), outputCompiledTmpl)
+	handleEvents(&searcher, s, initialState, parser.Headers(), renderer)
 
 	s.Fini()
-}
-
-func compileTemplate(outputColumn string, outputTemplate string) *template.Template {
-	if outputColumn != "" {
-		outputTemplate = fmt.Sprintf("{{.%s}}", outputColumn)
-	}
-	tmpl, err := template.New("test").Parse(outputTemplate)
-	if err != nil {
-		panic(fmt.Sprintf("Error while parsing output template: %s", err))
-	}
-	return tmpl
 }
 
 func listFiles() chan string {
@@ -155,7 +147,7 @@ func stdinHasPipe() bool {
 	return true
 }
 
-func handleEvents(searcher *search.TextSearcher, s tcell.Screen, state events.SearchState, headers []string, outputCompiledTmpl *template.Template) {
+func handleEvents(searcher *search.TextSearcher, s tcell.Screen, state events.SearchState, headers []string, renderer renderOutput) {
 	eventChannel := events.NewEventsChannel(s, "", *searcher)
 	ticker := time.NewTicker(500 * time.Millisecond)
 	for {
@@ -172,7 +164,7 @@ func handleEvents(searcher *search.TextSearcher, s tcell.Screen, state events.Se
 				s.Sync()
 			case events.EntryFinalSelectEvent:
 				finalSelectEvt := ev.(events.EntryFinalSelectEvent)
-				fmt.Printf(finalSelectEvt.State().Entry(*searcher, outputCompiledTmpl))
+				fmt.Printf(renderer(finalSelectEvt.State().Entry(*searcher).ParsedLine))
 				close(eventChannel)
 				return
 			case events.EscapeEvent:

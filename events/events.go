@@ -1,9 +1,7 @@
 package events
 
 import (
-	"bytes"
 	"fmt"
-	"text/template"
 
 	"github.com/gdamore/tcell"
 	"github.com/txominpelu/fnd/search"
@@ -122,18 +120,12 @@ func (state SearchState) FilteredLines(searcher search.TextSearcher) []search.Do
 	)
 }
 
-func (state SearchState) Entry(searcher search.TextSearcher, tmpl *template.Template) string {
+func (state SearchState) Entry(searcher search.TextSearcher) search.Document {
 	filtered := state.FilteredLines(searcher)
 	if state.Selected < len(filtered) {
-		var output bytes.Buffer
-		err := tmpl.Execute(&output, filtered[state.Selected].ParsedLine)
-		if err != nil {
-			//FIXME: deal with errors
-			panic(fmt.Sprintf("Error while executing output template: %s", err))
-		}
-		return output.String()
+		return filtered[state.Selected]
 	} else {
-		return ""
+		return search.Document{}
 	}
 }
 
