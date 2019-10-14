@@ -93,6 +93,7 @@ func JsonParser(headers []string) Parser {
 func ParseLine(parser Parser, line string) Document {
 	m := parser.Parse()(line)
 	parsedLine := map[string]string{}
+	loweredParsed := map[string]string{}
 	for k, interf := range m {
 		switch v := interf.(type) {
 		case int:
@@ -102,11 +103,13 @@ func ParseLine(parser Parser, line string) Document {
 		default:
 			parsedLine[k] = fmt.Sprintf("%v", v)
 		}
-
+		loweredParsed[k] = strings.ToLower(parsedLine[k])
 	}
 	parsedLine["$"] = line
 	return Document{
-		RawText:    line,
-		ParsedLine: parsedLine, //only one level key, value
+		RawText: line,
+		//only one level key, value
+		ParsedLine:    parsedLine,    //for display and return of command
+		LoweredParsed: loweredParsed, //for case insensitive search
 	}
 }

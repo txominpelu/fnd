@@ -9,6 +9,7 @@ type TextSearcher interface {
 }
 
 type Document struct {
-	RawText    string
-	ParsedLine map[string]string
+	RawText       string
+	ParsedLine    map[string]string
+	LoweredParsed map[string]string
 }

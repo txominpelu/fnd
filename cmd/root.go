@@ -19,7 +19,7 @@ import (
 	"github.com/txominpelu/fnd/events"
 	"github.com/txominpelu/fnd/screen"
 	"github.com/txominpelu/fnd/search"
-	"github.com/txominpelu/fnd/search/index"
+	"github.com/txominpelu/fnd/search/fuzzy"
 )
 
 var RootCmd = &cobra.Command{
@@ -66,9 +66,7 @@ func runRoot(cmd *cobra.Command, args []string) {
 		firstLine = scanner.Text()
 	}
 	parser := search.FormatNameToParser(lineFormat, firstLine)
-	lines := index.NewIndexedLines(
-		index.CommandLineTokenizer(),
-	)
+	lines := fuzzy.NewFuzzySearcher()
 	if comesFromStdin && lineFormat != "tabular" {
 		lines.AddDocument(search.ParseLine(parser, firstLine))
 	}
@@ -154,7 +152,7 @@ func stdinHasPipe() bool {
 	return true
 }
 
-func handleEvents(lines *index.IndexedLines, s tcell.Screen, state events.SearchState, headers []string, outputColumn string) {
+func handleEvents(lines search.TextSearcher, s tcell.Screen, state events.SearchState, headers []string, outputColumn string) {
 	eventChannel := events.NewEventsChannel(s, "", lines)
 	ticker := time.NewTicker(500 * time.Millisecond)
 	for {
@@ -189,7 +187,7 @@ func handleEvents(lines *index.IndexedLines, s tcell.Screen, state events.Search
 //	{{fi}}
 //  {{^lines}}
 
-func printRows(s tcell.Screen, state events.SearchState, indexedLines *index.IndexedLines, headers []string) {
+func printRows(s tcell.Screen, state events.SearchState, indexedLines search.TextSearcher, headers []string) {
 	s.Clear()
 	w, h := s.Size()
 	plain := tcell.StyleDefault
