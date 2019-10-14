@@ -3,6 +3,7 @@ package search
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -40,10 +41,11 @@ func TabularParser(headers []string) Parser {
 	}
 }
 
-func FormatNameToParser(format string, firstline string) Parser {
+func FormatNameToParser(format string, firstline string, headers []string) Parser {
+	var p Parser
 	switch format {
 	case "plain":
-		return PlainTextParser()
+		p = PlainTextParser()
 	case "json":
 		m := map[string]interface{}{}
 		err := json.Unmarshal([]byte(firstline), &m)
@@ -55,15 +57,19 @@ func FormatNameToParser(format string, firstline string) Parser {
 		for k, _ := range m {
 			headers = append(headers, k)
 		}
-		return JsonParser(headers)
+		sort.StringSlice(headers).Sort()
+		p = JsonParser(headers)
 	case "tabular":
 		headers := strings.Fields(firstline)
-		return TabularParser(headers)
+		p = TabularParser(headers)
 	default:
 		//FIXME: decide once and for all how to handle errors
 		panic(fmt.Sprintf("format '%s' is not valid", format))
 	}
-
+	if len(headers) > 0 {
+		p.headers = headers
+	}
+	return p
 }
 
 func PlainTextParser() Parser {
