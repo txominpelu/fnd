@@ -54,6 +54,16 @@ Examples:
     $> ps | kill -9 $(fnd --line_format tabular --output_column PID)
     ```
 
+# Troubleshooting
+
+- My command fails, how can I figure out what's happening ?
+
+Error logs are by default logged to stderr. To get the detailed error message you can redirect stderr to a log file or pass --log_file. E.g: 
+
+```
+$ fnd 2> out.log
+```
+
 
 # Examples
 

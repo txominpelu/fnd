@@ -7,7 +7,6 @@ TODO:
 - Show header other than $ in plain text format
 - Try the trie to avoid having to match exactly on word
 - When tokenizing don't split by dot, just stem by it
-- Log to a ~/.fnd logs file
 
 Features:
 
@@ -15,3 +14,4 @@ Features:
 - Enter - Returns currently selected item
 - Streaming entries - Show while continue reading stdin
 - Select entry with up - down
+- Log errors to stderr or specified log file 

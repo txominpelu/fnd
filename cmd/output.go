@@ -4,29 +4,26 @@ import (
 	"bytes"
 	"fmt"
 	"text/template"
+
+	"github.com/txominpelu/fnd/log"
 )
 
 type renderOutput = func(map[string]string) string
 
-func getRenderer(outputColumn string, outputTemplate string) renderOutput {
+func getRenderer(outputColumn string, outputTemplate string, logger *log.StandardLogger) renderOutput {
 	if outputTemplate == "" || outputColumn != "$" {
 		return renderByColumn(outputColumn)
 	}
-	return renderByTemplate(outputTemplate)
+	return renderByTemplate(outputTemplate, logger)
 }
 
-func renderByTemplate(outputTemplate string) renderOutput {
+func renderByTemplate(outputTemplate string, logger *log.StandardLogger) renderOutput {
 	tmpl, err := template.New("test").Parse(outputTemplate)
-	if err != nil {
-		panic(fmt.Sprintf("Error while parsing output template: %s", err))
-	}
+	logger.CheckError(err, fmt.Sprintf("while parsing output template: %s"))
 	return func(parsedLine map[string]string) string {
 		var output bytes.Buffer
 		err := tmpl.Execute(&output, parsedLine)
-		if err != nil {
-			//FIXME: deal with errors
-			panic(fmt.Sprintf("Error while executing output template: %s", err))
-		}
+		logger.CheckError(err, fmt.Sprintf("while executing output template: %s"))
 		return output.String()
 	}
 }

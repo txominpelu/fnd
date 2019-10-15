@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/txominpelu/fnd/log"
 )
 
 //Parser takes a line and creates a table (map from field to value)
@@ -41,7 +43,7 @@ func TabularParser(headers []string) Parser {
 	}
 }
 
-func FormatNameToParser(format string, firstline string, headers []string) Parser {
+func FormatNameToParser(format string, firstline string, headers []string, logger *log.StandardLogger) Parser {
 	var p Parser
 	switch format {
 	case "plain":
@@ -49,22 +51,22 @@ func FormatNameToParser(format string, firstline string, headers []string) Parse
 	case "json":
 		m := map[string]interface{}{}
 		err := json.Unmarshal([]byte(firstline), &m)
-		//FIXME: error handle
-		if err != nil {
-			panic("Failed parsing line as json")
-		}
+		logger.CheckError(
+			err,
+			fmt.Sprintf("when parsing first line '' as json", firstline),
+		)
 		headers := []string{}
 		for k, _ := range m {
 			headers = append(headers, k)
 		}
 		sort.StringSlice(headers).Sort()
-		p = JsonParser(headers)
+		p = JsonParser(headers, logger)
 	case "tabular":
 		headers := strings.Fields(firstline)
 		p = TabularParser(headers)
 	default:
-		//FIXME: decide once and for all how to handle errors
-		panic(fmt.Sprintf("format '%s' is not valid", format))
+		err := fmt.Errorf("pass invalid --line_format '%s' should be one of (plain/tabular/json) \n", format)
+		logger.CheckError(err, "")
 	}
 	if len(headers) > 0 {
 		p.headers = headers
@@ -80,14 +82,11 @@ func PlainTextParser() Parser {
 	}
 }
 
-func JsonParser(headers []string) Parser {
+func JsonParser(headers []string, logger *log.StandardLogger) Parser {
 	parse := func(line string) map[string]interface{} {
 		m := map[string]interface{}{}
 		err := json.Unmarshal([]byte(line), &m)
-		//FIXME: if line cannot be parsed, just ignore, maybe log
-		if err != nil {
-			panic("Failed parsing line as json")
-		}
+		logger.WarnIfErr(err, "when parsing line as json")
 		return m
 	}
 	return Parser{

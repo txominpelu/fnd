@@ -13,6 +13,7 @@ import (
 	"github.com/gdamore/tcell/encoding"
 	"github.com/spf13/cobra"
 	"github.com/txominpelu/fnd/events"
+	"github.com/txominpelu/fnd/log"
 	"github.com/txominpelu/fnd/screen"
 	"github.com/txominpelu/fnd/search"
 	"github.com/txominpelu/fnd/search/fuzzy"
@@ -31,17 +32,27 @@ var outputColumn string
 var outputTemplate string
 var searchType string
 var displayColumns []string
+var logFile string
 
 func init() {
 	RootCmd.PersistentFlags().StringVar(&lineFormat, "line_format", "plain", "fnd will parse the lines according to this format (plain,json,tabular)")
 	RootCmd.PersistentFlags().StringVar(&outputColumn, "output_column", "$", "column that will be used as output when picking an element ($ means it outputs the whole row)")
 	RootCmd.PersistentFlags().StringVar(&outputTemplate, "output_template", "", "golang template for the output: e.g {{.PID}} means return PID field")
 	RootCmd.PersistentFlags().StringVar(&searchType, "search_type", "fuzzy", "type of search (indexed, fuzzy). Indexed is faster for bigger input, fuzzy for finding more matches")
+	RootCmd.PersistentFlags().StringVar(&logFile, "log_file", "", "errors will be logged to the given file")
 	RootCmd.PersistentFlags().StringSliceVar(&displayColumns, "display_columns", []string{}, "comma separated list of columns to display in order")
 }
 
 func runRoot(cmd *cobra.Command, args []string) {
 
+	s := initScreen()
+	// make sure to always clean the screen
+	defer func() {
+		s.Fini()
+		if r := recover(); r != nil {
+			fmt.Println(r)
+		}
+	}()
 	firstLine := ""
 	var scanner *bufio.Scanner
 	comesFromStdin := stdinHasPipe()
@@ -50,19 +61,11 @@ func runRoot(cmd *cobra.Command, args []string) {
 		scanner.Scan()
 		firstLine = scanner.Text()
 	}
-	//logger := log.NewLogger(func() {})
-	//err := fmt.Errorf("Failed")
-	//logger.CheckError(err, "When starting")
+	logger := log.NewLogger(logFile)
+	searcher, err := getSearcher(searchType)
+	logger.CheckError(err, "when parsing search_type flag")
 
-	parser := search.FormatNameToParser(lineFormat, firstLine, displayColumns)
-	var searcher search.TextSearcher
-	if searchType == "indexed" {
-		searcher = index.NewIndexedLines(index.CommandLineTokenizer())
-	} else if searchType == "fuzzy" {
-		searcher = fuzzy.NewFuzzySearcher()
-	} else {
-		panic(fmt.Sprintf("search_type should be one of (indexed / fuzzy) it was '%s'", searchType))
-	}
+	parser := search.FormatNameToParser(lineFormat, firstLine, displayColumns, logger)
 	if comesFromStdin && lineFormat != "tabular" {
 		searcher.AddDocument(search.ParseLine(parser, firstLine))
 	}
@@ -76,7 +79,7 @@ func runRoot(cmd *cobra.Command, args []string) {
 				panic(fmt.Sprintf("Error: %s while reading stdin", err))
 			}
 		} else {
-			filesChannel := listFiles()
+			filesChannel := listFiles(logger)
 			for line := range filesChannel {
 				searcher.AddDocument(search.ParseLine(parser, line))
 			}
@@ -84,15 +87,24 @@ func runRoot(cmd *cobra.Command, args []string) {
 	}()
 
 	initialState := events.SearchState{Query: "", Selected: 0}
-	renderer := getRenderer(outputColumn, outputTemplate)
-	s := initScreen()
+	renderer := getRenderer(outputColumn, outputTemplate, logger)
 	printRows(s, initialState, &searcher, parser.Headers())
 	handleEvents(&searcher, s, initialState, parser.Headers(), renderer)
 
 	s.Fini()
 }
 
-func listFiles() chan string {
+func getSearcher(searchType string) (search.TextSearcher, error) {
+	if searchType == "indexed" {
+		return index.NewIndexedLines(index.CommandLineTokenizer()), nil
+	} else if searchType == "fuzzy" {
+		return fuzzy.NewFuzzySearcher(), nil
+	} else {
+		return nil, fmt.Errorf("search_type should be one of (indexed / fuzzy) it was '%s'", searchType)
+	}
+}
+
+func listFiles(logger *log.StandardLogger) chan string {
 	out := make(chan string)
 	go func() {
 		if isGitFolder() {
@@ -101,7 +113,7 @@ func listFiles() chan string {
 			}
 			close(out)
 		} else {
-			filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+			err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
 				if err != nil {
 					return err
 				}
@@ -109,8 +121,8 @@ func listFiles() chan string {
 				return nil
 			})
 			close(out)
+			logger.CheckError(err, "when iterating over files recursively")
 		}
-		//FIXME: log error if err != nil
 	}()
 	return out
 }
