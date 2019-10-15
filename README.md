@@ -44,13 +44,13 @@ Examples:
 
 - Pass tabular format (pass a table with a header and separated by spaces )
 
-    ```
+    ```bash
     $> ps | fnd --line_format tabular
     ```
 
 - You can choose which column will be the output of the command. E.g this is how to kill the process that is chosen in fnd.
 
-    ```
+    ```bash
     $> ps | kill -9 $(fnd --line_format tabular --output_column PID)
     ```
 
