@@ -4,9 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/gdamore/tcell"
@@ -130,44 +128,17 @@ func getSearcher(searchType string) (search.TextSearcher, error) {
 func listFiles(logger *log.StandardLogger) chan string {
 	out := make(chan string)
 	go func() {
-		if isGitFolder() {
-			for _, f := range gitLs() {
-				out <- f
+		err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
 			}
-			close(out)
-		} else {
-			err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
-				if err != nil {
-					return err
-				}
-				out <- path
-				return nil
-			})
-			close(out)
-			logger.CheckError(err, "when iterating over files recursively")
-		}
+			out <- path
+			return nil
+		})
+		close(out)
+		logger.CheckError(err, "when iterating over files recursively")
 	}()
 	return out
-}
-
-func gitLs() []string {
-	args := strings.Fields("git ls-files")
-	out, err := exec.Command(args[0], args[1:]...).Output()
-	if err != nil {
-		//FIXME: log error
-		return []string{}
-	}
-	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
-	return lines
-}
-
-func isGitFolder() bool {
-	args := strings.Fields("git rev-parse --is-inside-work-tree")
-	out, err := exec.Command(args[0], args[1:]...).Output()
-	if err != nil {
-		return false
-	}
-	return strings.TrimSpace(string(out)) == "true"
 }
 
 func stdinHasPipe() bool {

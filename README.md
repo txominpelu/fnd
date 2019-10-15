@@ -13,12 +13,12 @@ fnd is heavily inspired by [fzf](https://github.com/junegunn/fzf) but with addit
 - Customized input and output with jq.
     - Choose how your input will look like. - WIP
 
-        ```
+        ```bash
         # parse lines as a tabular with header and choose which columns to display 
         $> ps aux | fnd --parser tabular --header --display-columns "USER,PID,%CPU,%MEM,COMMAND" 
         ```
     - Choose what the output will look like - WIP
-        ```
+        ```bash
         # Kill the selected process
         $> kill -9 $(ps aux | fnd --parser tabular --header --output '.PID')
         ```
@@ -38,8 +38,8 @@ Examples:
 
 - Open file with vi:
 
-    ```
-    $> vi $(fnd)
+    ```bash
+    $> vi $(fnd-fdfind)
     ```
 
 - Pass tabular format (pass a table with a header and separated by spaces )
@@ -60,7 +60,7 @@ Examples:
 
 Error logs are by default logged to stderr. To get the detailed error message you can redirect stderr to a log file or pass --log_file. E.g: 
 
-```
+```bash
 $ fnd 2> out.log
 ```
 
