@@ -2,6 +2,8 @@ package search
 
 import "sort"
 
+type Compare = func(int, int) bool
+
 type docSorter struct {
 	docIds []int
 	by     func(d1, d2 int) bool // Closure used in the Less method.
@@ -30,16 +32,8 @@ func Sort(docIds []int, by func(int, int) bool) {
 	sort.Sort(dSorter)
 }
 
-func SortDocuments(docIds []int, searcher TextSearcher) []Document {
-	Sort(docIds, func(d1 int, d2 int) bool {
-		if len(searcher.GetDocById(d1).RawText) != len(searcher.GetDocById(d2).RawText) {
-			t1 := searcher.GetDocById(d1).RawText
-			t2 := searcher.GetDocById(d2).RawText
-			return len(t1) < len(t2)
-		} else {
-			return d1 < d2
-		}
-	})
+func SortDocuments(docIds []int, searcher TextSearcher, by func(int, int) bool) []Document {
+	Sort(docIds, by)
 	docs := make([]Document, len(docIds))
 	for j, docId := range docIds {
 		docs[j] = searcher.GetDocById(docId)

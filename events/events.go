@@ -7,7 +7,7 @@ import (
 	"github.com/txominpelu/fnd/search"
 )
 
-func NewEventsChannel(s tcell.Screen, query string, searcher search.TextSearcher) chan Event {
+func NewEventsChannel(s tcell.Screen, query string, searcher search.TextSearcher, sorter search.Compare) chan Event {
 	out := make(chan Event)
 	st := SearchState{query, 0}
 	notifier := StateChangeNotifier{currentState: st, notifyChan: out}
@@ -25,7 +25,7 @@ func NewEventsChannel(s tcell.Screen, query string, searcher search.TextSearcher
 					notifier.triggerSelect()
 					break
 				case tcell.KeyUp:
-					if notifier.currentState.Selected+1 < len(notifier.currentState.FilteredLines(searcher)) {
+					if notifier.currentState.Selected+1 < len(notifier.currentState.FilteredLines(searcher, sorter)) {
 						notifier.setSelected(notifier.currentState.Selected + 1)
 					}
 				case tcell.KeyDown:
@@ -34,14 +34,14 @@ func NewEventsChannel(s tcell.Screen, query string, searcher search.TextSearcher
 					}
 				case tcell.KeyDEL:
 					if len(notifier.currentState.Query) > 0 {
-						notifier.setQuery(notifier.currentState.Query[:len(notifier.currentState.Query)-1], searcher)
+						notifier.setQuery(notifier.currentState.Query[:len(notifier.currentState.Query)-1], searcher, sorter)
 					}
 				case tcell.KeyBS:
 					if len(notifier.currentState.Query) > 0 {
-						notifier.setQuery(notifier.currentState.Query[:len(notifier.currentState.Query)-1], searcher)
+						notifier.setQuery(notifier.currentState.Query[:len(notifier.currentState.Query)-1], searcher, sorter)
 					}
 				case tcell.KeyRune:
-					notifier.setQuery(fmt.Sprintf("%s%c", notifier.currentState.Query, ev.Rune()), searcher)
+					notifier.setQuery(fmt.Sprintf("%s%c", notifier.currentState.Query, ev.Rune()), searcher, sorter)
 				}
 			case *tcell.EventResize:
 				notifier.triggerResize()
@@ -66,12 +66,12 @@ func (s *StateChangeNotifier) setSelected(selected int) {
 	}
 }
 
-func (s *StateChangeNotifier) setQuery(query string, searcher search.TextSearcher) {
+func (s *StateChangeNotifier) setQuery(query string, searcher search.TextSearcher, sorter search.Compare) {
 	if s.currentState.Query != query {
 		s.change(func(newState *SearchState) {
 			(*newState).Query = query
 		})
-		filteredEntries := s.currentState.FilteredLines(searcher)
+		filteredEntries := s.currentState.FilteredLines(searcher, sorter)
 		if len(filteredEntries) <= s.currentState.Selected {
 			s.setSelected(0)
 		}
@@ -113,15 +113,16 @@ type SearchState struct {
 	Selected int
 }
 
-func (state SearchState) FilteredLines(searcher search.TextSearcher) []search.Document {
+func (state SearchState) FilteredLines(searcher search.TextSearcher, sorter search.Compare) []search.Document {
 	return search.SortDocuments(
 		searcher.FilterEntries(search.ParseQuery(state.Query)),
 		searcher,
+		sorter,
 	)
 }
 
-func (state SearchState) Entry(searcher search.TextSearcher) search.Document {
-	filtered := state.FilteredLines(searcher)
+func (state SearchState) Entry(searcher search.TextSearcher, sorter search.Compare) search.Document {
+	filtered := state.FilteredLines(searcher, sorter)
 	if state.Selected < len(filtered) {
 		return filtered[state.Selected]
 	} else {

@@ -33,6 +33,7 @@ var outputTemplate string
 var searchType string
 var displayColumns []string
 var logFile string
+var sorterName string
 
 func init() {
 	RootCmd.PersistentFlags().StringVar(&lineFormat, "line_format", "plain", "fnd will parse the lines according to this format (plain,json,tabular)")
@@ -41,6 +42,7 @@ func init() {
 	RootCmd.PersistentFlags().StringVar(&searchType, "search_type", "fuzzy", "type of search (indexed, fuzzy). Indexed is faster for bigger input, fuzzy for finding more matches")
 	RootCmd.PersistentFlags().StringVar(&logFile, "log_file", "", "errors will be logged to the given file")
 	RootCmd.PersistentFlags().StringSliceVar(&displayColumns, "display_columns", []string{}, "comma separated list of columns to display in order")
+	RootCmd.PersistentFlags().StringVar(&sorterName, "sorter", "default", " sorter (index/default) ")
 }
 
 func runRoot(cmd *cobra.Command, args []string) {
@@ -63,6 +65,7 @@ func runRoot(cmd *cobra.Command, args []string) {
 	}
 	logger := log.NewLogger(logFile)
 	searcher, err := getSearcher(searchType)
+	sorter := getSorter(searcher, sorterName)
 	logger.CheckError(err, "when parsing search_type flag")
 
 	parser := search.FormatNameToParser(lineFormat, firstLine, displayColumns, logger)
@@ -88,10 +91,30 @@ func runRoot(cmd *cobra.Command, args []string) {
 
 	initialState := events.SearchState{Query: "", Selected: 0}
 	renderer := getRenderer(outputColumn, outputTemplate, logger)
-	printRows(s, initialState, &searcher, parser.Headers())
-	handleEvents(&searcher, s, initialState, parser.Headers(), renderer)
+	printRows(s, initialState, &searcher, parser.Headers(), sorter)
+	handleEvents(&searcher, s, initialState, parser.Headers(), renderer, sorter)
 
 	s.Fini()
+}
+
+func getSorter(searcher search.TextSearcher, sorter string) search.Compare {
+	if sorter == "index" {
+		return func(d1 int, d2 int) bool {
+			return d2 < d1
+		}
+	} else {
+		return func(d1 int, d2 int) bool {
+			if len(searcher.GetDocById(d1).RawText) != len(searcher.GetDocById(d2).RawText) {
+				t1 := searcher.GetDocById(d1).RawText
+				t2 := searcher.GetDocById(d2).RawText
+				return len(t1) < len(t2)
+			} else {
+				return d1 < d2
+			}
+		}
+
+	}
+
 }
 
 func getSearcher(searchType string) (search.TextSearcher, error) {
@@ -159,24 +182,24 @@ func stdinHasPipe() bool {
 	return true
 }
 
-func handleEvents(searcher *search.TextSearcher, s tcell.Screen, state events.SearchState, headers []string, renderer renderOutput) {
-	eventChannel := events.NewEventsChannel(s, "", *searcher)
+func handleEvents(searcher *search.TextSearcher, s tcell.Screen, state events.SearchState, headers []string, renderer renderOutput, sorter search.Compare) {
+	eventChannel := events.NewEventsChannel(s, "", *searcher, sorter)
 	ticker := time.NewTicker(500 * time.Millisecond)
 	for {
 		select {
 		case <-ticker.C:
-			printRows(s, state, searcher, headers)
+			printRows(s, state, searcher, headers, sorter)
 		case ev := <-eventChannel:
 			state = ev.State()
 			switch ev.(type) {
 			case events.SearchStateChanged:
 				qChangedEv := ev.(events.SearchStateChanged)
-				printRows(s, qChangedEv.State(), searcher, headers)
+				printRows(s, qChangedEv.State(), searcher, headers, sorter)
 			case events.ScreenResizeEvent:
 				s.Sync()
 			case events.EntryFinalSelectEvent:
 				finalSelectEvt := ev.(events.EntryFinalSelectEvent)
-				fmt.Printf(renderer(finalSelectEvt.State().Entry(*searcher).ParsedLine))
+				fmt.Printf(renderer(finalSelectEvt.State().Entry(*searcher, sorter).ParsedLine))
 				close(eventChannel)
 				return
 			case events.EscapeEvent:
@@ -194,7 +217,7 @@ func handleEvents(searcher *search.TextSearcher, s tcell.Screen, state events.Se
 //	{{fi}}
 //  {{^lines}}
 
-func printRows(s tcell.Screen, state events.SearchState, searcher *search.TextSearcher, headers []string) {
+func printRows(s tcell.Screen, state events.SearchState, searcher *search.TextSearcher, headers []string, sorter search.Compare) {
 	s.Clear()
 	w, h := s.Size()
 	plain := tcell.StyleDefault
@@ -204,7 +227,7 @@ func printRows(s tcell.Screen, state events.SearchState, searcher *search.TextSe
 	sc := screen.NewScreen(w, h)
 	sc.AppendRow(fmt.Sprintf("> %s", state.Query), 0, bold)
 
-	filtered := state.FilteredLines(*searcher)
+	filtered := state.FilteredLines(*searcher, sorter)
 	sc.AppendRow(fmt.Sprintf("  %d/%d ", len(filtered), (*searcher).Count()), 0, bold)
 
 	t := screen.NewTable(headers)
