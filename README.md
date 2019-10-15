@@ -68,3 +68,10 @@ $ fnd 2> out.log
 # Examples
 
 See at [commands/](commands/)
+
+# [License](LICENSE)
+
+The MIT License (MIT)
+
+Copyright (c) 2019 Íñigo Mediavilla Saiz
+
