@@ -32,6 +32,16 @@ fnd is heavily inspired by [fzf](https://github.com/junegunn/fzf) but with addit
     </kbd>
 
     - tabular
+
+    ```bash
+    ps aux | fnd --line_format tabular
+    ```
+
+    <kbd>
+        <img src="https://github.com/txominpelu/fnd/raw/master/doc/images/tabular_ps_example.png" alt="Choose a process with fnd">
+    </kbd>
+
+
     - plain
 
 - Customized command output:
@@ -41,14 +51,14 @@ fnd is heavily inspired by [fzf](https://github.com/junegunn/fzf) but with addit
 
     ```bash
     # Kill the selected process
-    kill -9 $(ps aux | fnd --parser tabular --header --output_column 'PID')
+    kill -9 $(ps aux | fnd --line_format tabular --output_column 'PID')
     # fnd will output the PID column
     ```
 
     - Choose output format with golang templates: `--output_template`
 
     ```bash
-    echo $(ps aux | fnd --parser tabular --header --output_template '{{.PID}}-{{.USER}}')
+    echo $(ps aux | fnd --line_format tabular --output_template '{{.PID}}-{{.USER}}')
     # fnd will output PID-USER values
     ```
 
