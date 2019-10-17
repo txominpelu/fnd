@@ -80,6 +80,16 @@ Examples:
     ps | kill -9 $(fnd --line_format tabular --output_column PID)
     ```
 
+See other examples at [commands/](commands/):
+
+- [fnd-apt-install](commands/fnd-apt-install.sh)
+- [fnd-ps-aux](commands/fnd-ps-aux.sh)
+- [fnd-kill](commands/fnd-kill.sh)
+- [fnd-rg-edit](commands/fnd-rg-edit.sh)
+- [CTRL+R](commands/__fnd_history.sh)
+- [fnd-fdfind](commands/fnd-fdfind.sh)
+
+
 # Troubleshooting
 
 - My command fails, how can I figure out what's happening ?
@@ -124,8 +134,6 @@ echo $(ps aux | fnd --line_format tabular --output_column)
 
 ![](https://github.com/txominpelu/fnd/blob/master/doc/videos/fnd-ps-aux.gif)
 
-
-See other examples at [commands/](commands/)
 
 # [License](LICENSE)
 
