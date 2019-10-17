@@ -10,7 +10,41 @@
 ```
 
 
-Quickly search through a list of documents parsed from stdin. 
+1. Get a list of things.
+2. Search through them, filter them, pick one.
+3. Do something with it
+
+Example:
+
+1. Get a list of running processes.
+
+```bash
+ps aux
+```
+
+2. Pass them to **fnd** to allow searching through them.
+
+
+```bash
+ps aux | fnd
+```
+
+3. Parse input to obtain processes' fields
+
+```bash
+ps aux | fnd --line_format tabular
+```
+
+4. Do something with the output (E.g print the PID)
+
+
+```bash
+echo $(ps aux | fnd --line_format tabular --output_column)
+```
+
+
+![](https://github.com/txominpelu/fnd/blob/master/doc/videos/fnd-ps-aux.gif)
+
 
 fnd is heavily inspired by [fzf](https://github.com/junegunn/fzf) but with additional features:
 
