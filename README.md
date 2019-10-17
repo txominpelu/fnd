@@ -27,7 +27,9 @@ fnd is heavily inspired by [fzf](https://github.com/junegunn/fzf) but with addit
             fnd --line_format json
     ```
 
-    ![Search currency rate](/doc/images/currency_json_example.png)
+    <kbd>
+        <img src="https://github.com/txominpelu/fnd/raw/master/doc/images/currency_json_example.png" alt="Search currency rate">
+    </kbd>
 
     - tabular
     - plain
