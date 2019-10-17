@@ -191,9 +191,8 @@ func handleEvents(searcher *search.TextSearcher, s tcell.Screen, state events.Se
 func printRows(s tcell.Screen, state events.SearchState, searcher *search.TextSearcher, headers []string, sorter search.Compare) {
 	s.Clear()
 	w, h := s.Size()
-	plain := tcell.StyleDefault
-	blink := tcell.StyleDefault.Foreground(tcell.ColorSilver)
-	bold := tcell.StyleDefault.Bold(true)
+	plain := tcell.StyleDefault.Normal()
+	bold := tcell.StyleDefault.Normal().Bold(true)
 
 	sc := screen.NewScreen(w, h)
 	sc.AppendRow(fmt.Sprintf("> %s", state.Query), 0, bold)
@@ -205,7 +204,7 @@ func printRows(s tcell.Screen, state events.SearchState, searcher *search.TextSe
 	for _, l := range filtered {
 		t.AddRow(l.ParsedLine)
 	}
-	t.WriteToScreen(&sc, state.Selected, plain, blink, bold)
+	t.WriteToScreen(&sc, state.Selected, plain, bold, bold)
 	sc.PrintAll(s)
 
 	s.Sync()
@@ -225,9 +224,6 @@ func initScreen() tcell.Screen {
 		os.Exit(1)
 	}
 
-	s.SetStyle(tcell.StyleDefault.
-		Foreground(tcell.ColorWhite).
-		Background(tcell.ColorBlack))
 	s.Clear()
 	return s
 }

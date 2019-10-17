@@ -1,27 +1,56 @@
 
-# fnd
+```
+   __           _ 
+  / ■|         |■|
+ |■|_ _ __   __|■|
+ |■ ■|■'■ \ /■■`■|
+ |■| |■| |■|■(_|■|
+ |■| |■| |■|\■■,■|
+
+```
 
 
-Quickly search through a list, choose elements. 
+Quickly search through a list of documents parsed from stdin. 
 
 fnd is heavily inspired by [fzf](https://github.com/junegunn/fzf) but with additional features:
 
-- Contains parsers to give structure to your lines.
-    - json - WIP
-    - tabular format - WIP
 
-- Customized input and output with jq.
-    - Choose how your input will look like. - WIP
+# Aditional features
 
-        ```bash
-        # parse lines as a tabular with header and choose which columns to display 
-        $> ps aux | fnd --parser tabular --header --display-columns "USER,PID,%CPU,%MEM,COMMAND" 
-        ```
-    - Choose what the output will look like - WIP
-        ```bash
-        # Kill the selected process
-        $> kill -9 $(ps aux | fnd --parser tabular --header --output '.PID')
-        ```
+- Contains parsers to convert your input into documents. `line_format`.
+
+    - json
+
+    ```bash
+    curl https://api.exchangerate-api.com/v4/latest/EUR | \
+        jq -c '.rates | to_entries[] | {"Currency": .key, "Rate": .value }' | \
+            fnd --line_format json
+    ```
+
+    ![Search currency rate](/doc/images/currency_json_example.png)
+
+    - tabular
+    - plain
+
+- Customized command output:
+
+    - Choose what the output will look like
+        - Choose wich column to output: `--output_column`
+
+    ```bash
+    # Kill the selected process
+    kill -9 $(ps aux | fnd --parser tabular --header --output_column 'PID')
+    # fnd will output the PID column
+    ```
+
+    - Choose output format with golang templates: `--output_template`
+
+    ```bash
+    echo $(ps aux | fnd --parser tabular --header --output_template '{{.PID}}-{{.USER}}')
+    # fnd will output PID-USER values
+    ```
+
+
 - Pick multiple options - WIP
 
 
@@ -39,19 +68,19 @@ Examples:
 - Open file with vi:
 
     ```bash
-    $> vi $(fnd-fdfind)
+    vi $(fnd-fdfind)
     ```
 
 - Pass tabular format (pass a table with a header and separated by spaces )
 
     ```bash
-    $> ps | fnd --line_format tabular
+    ps | fnd --line_format tabular
     ```
 
 - You can choose which column will be the output of the command. E.g this is how to kill the process that is chosen in fnd.
 
     ```bash
-    $> ps | kill -9 $(fnd --line_format tabular --output_column PID)
+    ps | kill -9 $(fnd --line_format tabular --output_column PID)
     ```
 
 # Troubleshooting

@@ -49,9 +49,9 @@ func (t Table) WriteToScreen(sc *Screen, selected int, plainStyle tcell.Style, s
 	for i, row := range t.rows {
 		rowString := t.buildRowString(row, columnToWidth)
 		if i == selected {
-			sc.AppendRow(fmt.Sprintf("> %s", rowString), 0, plainStyle)
+			sc.AppendRow(fmt.Sprintf("> %s", rowString), 0, selectedStyle)
 		} else {
-			sc.AppendRow(fmt.Sprintf("  %s", rowString), 0, selectedStyle)
+			sc.AppendRow(fmt.Sprintf("  %s", rowString), 0, plainStyle)
 		}
 		// 4 = headers line + query line + counter line + initial line
 		if i+4 >= sc.height {
