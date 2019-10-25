@@ -33,6 +33,7 @@ var displayColumns []string
 var logFile string
 var sorterName string
 var delimiter string
+var sorterColumn string
 
 func init() {
 	RootCmd.PersistentFlags().StringVar(&lineFormat, "line_format", "plain", "fnd will parse the lines according to this format (plain,json,tabular)")
@@ -42,7 +43,8 @@ func init() {
 	RootCmd.PersistentFlags().StringVar(&searchType, "search_type", "fuzzy", "type of search (indexed, fuzzy). Indexed is faster for bigger input, fuzzy for finding more matches")
 	RootCmd.PersistentFlags().StringVar(&logFile, "log_file", "", "errors will be logged to the given file")
 	RootCmd.PersistentFlags().StringSliceVar(&displayColumns, "display_columns", []string{}, "comma separated list of columns to display in order")
-	RootCmd.PersistentFlags().StringVar(&sorterName, "sorter", "default", " sorter (index/default) ")
+	RootCmd.PersistentFlags().StringVar(&sorterName, "sorter", "default", " sorter (index/default/bycolumn) ")
+	RootCmd.PersistentFlags().StringVar(&sorterColumn, "sortby_column", "$", " column to use when using sorter bycolumn")
 }
 
 func runRoot(cmd *cobra.Command, args []string) {
@@ -65,7 +67,7 @@ func runRoot(cmd *cobra.Command, args []string) {
 	}
 	logger := log.NewLogger(logFile)
 	searcher, err := getSearcher(searchType)
-	sorter := getSorter(searcher, sorterName)
+	sorter := getSorter(searcher, sorterName, sorterColumn)
 	logger.CheckError(err, "when parsing search_type flag")
 
 	parser := search.FormatNameToParser(lineFormat, firstLine, displayColumns, logger, []rune(delimiter)[0])
@@ -97,10 +99,19 @@ func runRoot(cmd *cobra.Command, args []string) {
 	s.Fini()
 }
 
-func getSorter(searcher search.TextSearcher, sorter string) search.Compare {
+func getSorter(searcher search.TextSearcher, sorter string, sorterColumn string) search.Compare {
 	if sorter == "index" {
 		return func(d1 int, d2 int) bool {
 			return d2 < d1
+		}
+	} else if sorter == "bycolumn" {
+		return func(d1 int, d2 int) bool {
+			t1 := searcher.GetDocById(d1).ParsedLine[sorterColumn]
+			t2 := searcher.GetDocById(d2).ParsedLine[sorterColumn]
+			if t1 != t2 {
+				return t1 < t2
+			}
+			return d1 < d2
 		}
 	} else {
 		return func(d1 int, d2 int) bool {

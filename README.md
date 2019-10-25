@@ -58,6 +58,12 @@ See [Full Example](#full-example)
     # fnd will output PID-USER values
     ```
 
+- Sort by column (column value is considered as a string):
+
+    ```bash
+    ps aux | fnd --line_format tabular --output_column 'PID' --sorter bycolumn --sortby_column PID
+    ```
+
 # Examples
 
 Examples:
