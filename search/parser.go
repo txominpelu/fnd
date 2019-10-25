@@ -23,16 +23,16 @@ func (p Parser) Parse() func(string) map[string]interface{} {
 	return p.parse
 }
 
-func TabularParser(headers []string) Parser {
+func TabularParser(headers []string, delimiter rune) Parser {
 	parse := func(line string) map[string]interface{} {
-		columns := strings.Fields(line)
+		columns := strings.FieldsFunc(line, func(r rune) bool { return r == delimiter })
 		result := map[string]interface{}{}
 		for i := 0; i < len(headers) && i < len(columns); i++ {
 			if i == len(headers)-1 {
 				//for the last column take everything that's left
-				result[headers[i]] = strings.Join(columns[i:], " ")
+				result[headers[i]] = strings.TrimSpace(strings.Join(columns[i:], string([]rune{delimiter})))
 			} else {
-				result[headers[i]] = columns[i]
+				result[headers[i]] = strings.TrimSpace(columns[i])
 			}
 		}
 		return result
@@ -43,7 +43,7 @@ func TabularParser(headers []string) Parser {
 	}
 }
 
-func FormatNameToParser(format string, firstline string, headers []string, logger *log.StandardLogger) Parser {
+func FormatNameToParser(format string, firstline string, headers []string, logger *log.StandardLogger, delimiter rune) Parser {
 	var p Parser
 	switch format {
 	case "plain":
@@ -62,8 +62,12 @@ func FormatNameToParser(format string, firstline string, headers []string, logge
 		sort.StringSlice(headers).Sort()
 		p = JsonParser(headers, logger)
 	case "tabular":
-		headers := strings.Fields(firstline)
-		p = TabularParser(headers)
+		headers := strings.FieldsFunc(firstline, func(r rune) bool { return r == delimiter })
+		trimmedHeaders := []string{}
+		for _, h := range headers {
+			trimmedHeaders = append(trimmedHeaders, strings.TrimSpace(h))
+		}
+		p = TabularParser(trimmedHeaders, delimiter)
 	default:
 		err := fmt.Errorf("pass invalid --line_format '%s' should be one of (plain/tabular/json) \n", format)
 		logger.CheckError(err, "")

@@ -3,6 +3,7 @@ package screen
 import (
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/gdamore/tcell"
 )
@@ -32,10 +33,10 @@ func (t Table) computeWidths(width int) map[string]int {
 }
 
 func (t Table) maxWidth(column string) int {
-	max := len(column)
+	max := utf8.RuneCountInString(column)
 	for _, r := range t.rows {
-		if max < len(r[column]) {
-			max = len(r[column])
+		if max < utf8.RuneCountInString(r[column]) {
+			max = utf8.RuneCountInString(r[column])
 		}
 	}
 	return max
@@ -70,7 +71,7 @@ func (t Table) buildRowString(row map[string]string, columnToWidth map[string]in
 	sBuilder := strings.Builder{}
 	for _, column := range t.columns {
 		val := row[column]
-		rightPaddingLen := (columnToWidth[column] + 1) - len(val)
+		rightPaddingLen := (columnToWidth[column] + 1) - utf8.RuneCountInString(val)
 		fieldValue := strings.Join([]string{val, strings.Repeat(" ", rightPaddingLen)}, "")
 		sBuilder.WriteString(fieldValue)
 	}

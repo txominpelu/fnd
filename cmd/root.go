@@ -32,9 +32,11 @@ var searchType string
 var displayColumns []string
 var logFile string
 var sorterName string
+var delimiter string
 
 func init() {
 	RootCmd.PersistentFlags().StringVar(&lineFormat, "line_format", "plain", "fnd will parse the lines according to this format (plain,json,tabular)")
+	RootCmd.PersistentFlags().StringVar(&delimiter, "delimiter", " ", "delimiter for tabular parser (only the first char is considered)")
 	RootCmd.PersistentFlags().StringVar(&outputColumn, "output_column", "$", "column that will be used as output when picking an element ($ means it outputs the whole row)")
 	RootCmd.PersistentFlags().StringVar(&outputTemplate, "output_template", "", "golang template for the output: e.g {{.PID}} means return PID field")
 	RootCmd.PersistentFlags().StringVar(&searchType, "search_type", "fuzzy", "type of search (indexed, fuzzy). Indexed is faster for bigger input, fuzzy for finding more matches")
@@ -66,7 +68,7 @@ func runRoot(cmd *cobra.Command, args []string) {
 	sorter := getSorter(searcher, sorterName)
 	logger.CheckError(err, "when parsing search_type flag")
 
-	parser := search.FormatNameToParser(lineFormat, firstLine, displayColumns, logger)
+	parser := search.FormatNameToParser(lineFormat, firstLine, displayColumns, logger, []rune(delimiter)[0])
 	if comesFromStdin && lineFormat != "tabular" {
 		searcher.AddDocument(search.ParseLine(parser, firstLine))
 	}
