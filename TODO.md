@@ -1,6 +1,7 @@
 
 TODO:
 
+- Don't kill the world when it fails (e.g if rg is not installed fnd-rg-edit kills the current iterm tab)
 - Pick multiple entries (copy multiple files to another folder)
 - Sort by column (asc, desc) - Interactive 
 - Sort by column (asc, desc) - CLI 
