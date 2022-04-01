@@ -26,10 +26,16 @@ func (t *Table) AddRow(row map[string]string) {
 
 func (t Table) computeWidths(width int) map[string]int {
 	columnToWidth := map[string]int{}
+	sum := 0
 	for _, c := range t.columns {
 		columnToWidth[c] = t.maxWidth(c)
+		sum = sum + t.maxWidth(c)
 	}
-	return columnToWidth
+	proportionalColumnToWidth := map[string]int{}
+	for c, w := range columnToWidth {
+		proportionalColumnToWidth[c] = int(float64(w) / float64(sum) * float64(width))
+	}
+	return proportionalColumnToWidth
 }
 
 func (t Table) maxWidth(column string) int {
@@ -70,10 +76,26 @@ func (t Table) WriteToScreen(sc *Screen, selected int, plainStyle tcell.Style, s
 func (t Table) buildRowString(row map[string]string, columnToWidth map[string]int) string {
 	sBuilder := strings.Builder{}
 	for _, column := range t.columns {
-		val := row[column]
-		rightPaddingLen := (columnToWidth[column] + 1) - utf8.RuneCountInString(val)
-		fieldValue := strings.Join([]string{val, strings.Repeat(" ", rightPaddingLen)}, "")
+		i := 0
+		sValueBuilder := strings.Builder{}
+		for _, char := range row[column] {
+			i = i + 1
+			if i >= columnToWidth[column] {
+				break
+			}
+			sValueBuilder.WriteRune(char)
+		}
+		val := sValueBuilder.String()
+		fieldValue := strings.Join([]string{val, strings.Repeat(" ", computeRightPaddingLen(val, columnToWidth[column]))}, "")
 		sBuilder.WriteString(fieldValue)
 	}
 	return sBuilder.String()
+}
+
+func computeRightPaddingLen(val string, columnWidth int) int {
+	valLen := utf8.RuneCountInString(val)
+	if valLen >= columnWidth {
+		return 0
+	}
+	return (columnWidth + 1) - valLen
 }
