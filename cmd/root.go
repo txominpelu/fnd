@@ -183,7 +183,7 @@ func handleEvents(searcher *search.TextSearcher, s tcell.Screen, state events.Se
 				s.Sync()
 			case events.EntryFinalSelectEvent:
 				finalSelectEvt := ev.(events.EntryFinalSelectEvent)
-				fmt.Printf(renderer(finalSelectEvt.State().Entry(*searcher, sorter).ParsedLine))
+				fmt.Print(renderer(finalSelectEvt.State().Entry(*searcher, sorter).ParsedLine))
 				close(eventChannel)
 				return
 			case events.EscapeEvent:
