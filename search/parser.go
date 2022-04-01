@@ -111,6 +111,10 @@ func ParseLine(parser Parser, line string) Document {
 			parsedLine[k] = fmt.Sprintf("%d", v)
 		case string:
 			parsedLine[k] = v
+		case map[string]any:
+			jsonStr, _ := json.Marshal(v)
+			msg := fmt.Sprintf("%s", jsonStr)
+			parsedLine[k] = msg
 		default:
 			parsedLine[k] = fmt.Sprintf("%v", v)
 		}
