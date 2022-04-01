@@ -30,6 +30,7 @@ var outputColumn string
 var outputTemplate string
 var searchType string
 var displayColumns []string
+var hideColumns []string
 var logFile string
 var sorterName string
 var delimiter string
@@ -43,6 +44,7 @@ func init() {
 	RootCmd.PersistentFlags().StringVar(&searchType, "search_type", "fuzzy", "type of search (indexed, fuzzy). Indexed is faster for bigger input, fuzzy for finding more matches")
 	RootCmd.PersistentFlags().StringVar(&logFile, "log_file", "", "errors will be logged to the given file")
 	RootCmd.PersistentFlags().StringSliceVar(&displayColumns, "display_columns", []string{}, "comma separated list of columns to display in order")
+	RootCmd.PersistentFlags().StringSliceVar(&hideColumns, "hide_columns", []string{}, "comma separated list of columns to hide")
 	RootCmd.PersistentFlags().StringVar(&sorterName, "sorter", "default", " sorter (index/default/bycolumn) ")
 	RootCmd.PersistentFlags().StringVar(&sorterColumn, "sortby_column", "$", " column to use when using sorter bycolumn")
 }
@@ -70,7 +72,7 @@ func runRoot(cmd *cobra.Command, args []string) {
 	sorter := getSorter(searcher, sorterName, sorterColumn)
 	logger.CheckError(err, "when parsing search_type flag")
 
-	parser := search.FormatNameToParser(lineFormat, firstLine, displayColumns, logger, []rune(delimiter)[0])
+	parser := search.FormatNameToParser(lineFormat, firstLine, displayColumns, hideColumns, logger, []rune(delimiter)[0])
 	if comesFromStdin && lineFormat != "tabular" {
 		searcher.AddDocument(search.ParseLine(parser, firstLine))
 	}

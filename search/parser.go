@@ -3,10 +3,10 @@ package search
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/txominpelu/fnd/log"
+	"golang.org/x/exp/slices"
 	"sort"
 	"strings"
-
-	"github.com/txominpelu/fnd/log"
 )
 
 //Parser takes a line and creates a table (map from field to value)
@@ -43,7 +43,7 @@ func TabularParser(headers []string, delimiter rune) Parser {
 	}
 }
 
-func FormatNameToParser(format string, firstline string, headers []string, logger *log.StandardLogger, delimiter rune) Parser {
+func FormatNameToParser(format string, firstline string, headers []string, hideColumns []string, logger *log.StandardLogger, delimiter rune) Parser {
 	var p Parser
 	switch format {
 	case "plain":
@@ -57,7 +57,9 @@ func FormatNameToParser(format string, firstline string, headers []string, logge
 		)
 		headers := []string{}
 		for k, _ := range m {
-			headers = append(headers, k)
+			if !slices.Contains(hideColumns, k) {
+				headers = append(headers, k)
+			}
 		}
 		sort.StringSlice(headers).Sort()
 		p = JsonParser(headers, logger)
